@@ -32,6 +32,26 @@ Candidate causes (ground-truth labels):
 | `scaling_bug` | Unit/decimal error | Ratio to benchmark sits at a power of ten |
 | `mapping_fault` | Duplicate or mis-mapped node | Node tracks the wrong neighbour, or two nodes identical |
 
+## Domain clarification: mispricing vs. volatility (original, retained)
+
+A curve can be volatile, jagged, or move a lot and still be a correct reflection of
+the market (a rates shock, a real macro event). Mispricing is a different thing: a
+misconfiguration or bug in the pricing graph itself — for example:
+
+- a node stuck on a stale/cached rate while the rest of the curve updates
+- an interpolation or calibration setting applied to the wrong tenor/bucket
+- a decimal/unit scaling error introduced at the config level
+- a duplicate or mis-mapped node
+
+This means the simulator's "bad tick" category should specifically simulate
+pricing-graph misconfiguration, not just generic statistical anomalies — and that
+the tools split into two kinds: **evidence-gathering** (volatility, correlation,
+smoothness — describe what the data looks like) and the **decision point**
+(`check_mispricing` — checks pricing-graph config/state against known failure
+signatures). Exact design of `check_mispricing` is still open — see "Open design
+questions" below; this is deliberately left unresolved for now so the repo
+structure can go up first.
+
 ## Design principles (from the design discussion)
 
 1. **Threshold the surprise, not the price.** A fixed number like 3.5003 cannot work,
@@ -67,6 +87,54 @@ Candidate causes (ground-truth labels):
     quote different things (mid vs bid, different curve construction). Treat as low
     trust, behind a proper reference feed. Post-MVP.
 
+## Simulator design (CurveLab, original, retained)
+
+Generate synthetic yield curve ticks (timestamped snapshots: tenor, rate,
+timestamp) with three scenario categories, each carrying a hidden ground-truth
+label for later scoring:
+
+1. **Normal market noise** — small per-tenor moves within realistic historical vol
+   (e.g. 10y ~1–3bps/tick, 2y less, 30y more)
+2. **Genuine macro event** — a real, correlated parallel-ish shift across the whole
+   curve (simulated "Fed announcement" tick) — can be large/volatile and still
+   correct
+3. **Mispricing (pricing-graph fault)** — injected config-level faults: stale node,
+   misapplied interpolation/calibration, decimal/unit scaling bug, duplicate/mis-
+   mapped node — *not* a trader fat-finger input
+
+> **Session 2 extension:** the MVP simulator additionally generates multi-day history per node, an independent benchmark series with its own noise, and a change log, and faults start at a known time mid-history. "Genuine macro event" maps to the `market_move` label; the pricing-graph fault types map to the labels in the table above.
+
+## Agent workflow (original, retained)
+
+1. Ingest rate stream from simulator (tenor, rate, timestamp)
+2. Compute per-tenor stats: rolling mean/stddev, typical move size per tenor
+3. Flag candidates:
+   - Single-tenor move > N std devs from its own historical vol
+   - Whole-curve parallel shift (all tenors moved together at same timestamp)
+   - Curve shape breaks (spline-fit residual outliers)
+4. Investigate each flagged point:
+   - Check pricing-graph config/state for known failure signatures
+   - Cross-reference known market events (optional macro-calendar tool)
+   - Check if isolated to one source vs confirmed by a second
+5. Classify: "likely real move" / "likely mispricing" / "needs human review"
+6. Generate Excel report: flagged points, reasoning, before/after curve chart
+
+> **Session 2 note:** step 3 (flag candidates) now also compares against the benchmark and neighbouring nodes using per-node calibrated tolerances instead of a fixed N std devs; step 4 adds change-log correlation; step 6 (Excel report) is post-MVP.
+
+## Full tool set (original, retained; MVP subset marked below)
+
+| Tool | Role | Status |
+|---|---|---|
+| `get_recent_snapshots(tenor, n)` | historical window for vol calc | planned |
+| `compute_tenor_volatility(tenor)` | rolling stddev per tenor | planned |
+| `check_parallel_shift(snapshot)` | correlation across tenors at same timestamp | planned |
+| `check_curve_smoothness(snapshot)` | spline fit, residual outlier detection | planned |
+| `check_mispricing(snapshot)` | pricing-graph config/state consistency check — the actual decision point | **design TBD** |
+| `check_market_events(timestamp)` | optional, cross-reference macro calendar | planned |
+| `generate_report(flags)` | Excel with chart + reasoning column (ClosedXML/EPPlus) | planned |
+
+> **Mapping to the MVP:** `get_recent_snapshots` -> `get_history`; `compute_tenor_volatility` -> `compute_spread_stats` (calibrated sigma + standardised score); new in MVP: `get_benchmark`, `check_stale`, `get_change_log`. `check_parallel_shift`, `check_curve_smoothness` (-> butterflies / neighbour residuals), `check_mispricing` (design still TBD), `check_market_events` and `generate_report` are post-MVP.
+
 ## Minimum viable product (MVP)
 
 The thinnest slice that exercises the whole architecture (simulator, MCP tools,
@@ -93,7 +161,7 @@ benchmark, Excel report, confidence scores.
 baseline on the same simulator data, and its verdicts are explainable from the
 evidence it cites.
 
-## Phases
+## Phases (revised in Session 2)
 
 | Phase | Content | API credits? | Status |
 |---|---|---|---|
@@ -111,6 +179,22 @@ Claude API need a Console API key (`ANTHROPIC_API_KEY`, never committed).
 
 Every phase is split into small tutorial-style sessions: concept first, then code written
 together. Each session follows issue, branch, implementation, pull request.
+
+## Original phased plan (retained for reference)
+
+| Phase | Content | Needs API credits? |
+|---|---|---|
+| 1 (3–4 days) | Build CurveLab simulator — realistic base vol per tenor, random walk for normal conditions, inject the 3 scenario types at random intervals with hidden labels, output as CSV/in-memory stream | No |
+| 2 (~1 week) | MCP server scaffold + evidence-gathering tools (`get_recent_snapshots`, `compute_tenor_volatility`, `check_parallel_shift`, `check_curve_smoothness`), tested in MCP Inspector | No |
+| 3 | Design + implement `check_mispricing` once the open design question above is resolved | No |
+| 4 (~1 week) | Agent core: hand-coded agentic loop (Anthropic C# SDK + MCP client) consuming the tools above, investigation prompt, first classifications scored against ground truth | Yes |
+| 5 (3–4 days) | Scoring + reporting — precision/recall/F1 against simulator labels, Excel report with curve chart | Yes |
+| 6 (2–3 days) | Polish — tune false-positive rate, add confidence score rather than binary flag | Light |
+
+Sessions/phases that touch simulator, MCP server scaffold, and tool definitions
+need no API credits and can run on a Claude Pro login, same pattern as Module 1.
+
+> **Mapping:** original Phase 1 (simulator, 3-4 days) -> new Phase 1 (MVP simulator); Phase 2 (evidence tools, ~1 week) -> new Phase 2; Phase 3 (`check_mispricing`) -> Phase 6; Phase 4 (agent, ~1 week) -> new Phase 3; Phase 5 (scoring + report, 3-4 days) -> new Phase 3 scoring + Phase 7 report; Phase 6 (polish, 2-3 days) -> new Phase 7. New Phases 0, 4 and 5 are additions from the Session 2 design discussion.
 
 ## Architecture
 
@@ -144,6 +228,7 @@ The agent never sees the ground-truth label. Tools must not leak it.
   tools have something real to inspect.)
 - Verdict format and how `unsure` is handled operationally (who gets alerted).
 - Report format (Excel vs something else), deferred.
+- Original (retained): `check_mispricing` exact signature, what pricing-graph config/state it checks against, and whether it is a single tool or several; whether `check_market_events` is worth building or cut for scope; report format details (Excel vs. something else).
 
 ## Interview narrative
 
@@ -153,6 +238,15 @@ the rest of the curve, calibrates per-node tolerances from history instead of us
 fixed threshold, and uses the shape of the time series and the change history to
 attribute a cause. I measured it against a simulator with known causes. This maps
 directly to monitoring the real-time prices a bank publishes."
+
+### Original narrative (retained)
+
+"I built a yield curve anomaly/mispricing detection agent using a simulator with
+known ground truth — it distinguishes genuine macro-driven curve moves from
+mispriced ticks by reasoning across per-tenor volatility, whole-curve correlation,
+curve-shape smoothness, and the pricing graph's own configuration state, not just
+fixed thresholds. I measured precision/recall against the simulator's labels. This
+maps directly to a real mispricing problem in real-time swap/yield-curve pricing."
 
 ## Relationship to the flaky-test agent
 

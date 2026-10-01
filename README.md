@@ -1,16 +1,19 @@
 # claude-mcp-mispricing-watch-agent
 
-An agent that answers one question about published prices: **is this a real market
-price, or is the pricing system wrong, and if so, why?** Volatile or unusual moves can
-still be correct; the agent looks for defects in the pricing system itself (a stale
-node, a changed dial, a missing release, a scaling bug) by comparing against a
-benchmark and the rest of the curve, with per-node tolerances learned from history
-instead of one fixed threshold.
+An agent that watches a simulated interest-rate yield curve and flags pricing-graph
+mispricing — not just volatile or unusual market moves, but cases where the pricing
+graph itself has gone wrong (a stale node, a misapplied calibration, a config-level
+scaling bug).
+
+The operational question behind it: **is this published price a real market price, or is the
+pricing system wrong, and if so, why?** The agent compares against a benchmark and the rest
+of the curve, with per-node tolerances learned from history instead of one fixed threshold.
 
 Built in C# with two halves that mirror a real agentic system:
 
-- **MCP server** (tool producer) — deterministic tools that pull price history and
-  benchmarks, compute calibrated spread statistics, and read change logs.
+- **MCP server** (tool producer) — deterministic tools that pull curve data and
+  benchmarks, compute statistics, and check pricing-graph state/config for known
+  failure signatures.
 - **Agent loop** (tool orchestrator) — a hand-coded `call → tool_use → execute → loop`
   cycle (Anthropic C# SDK + MCP client) that reasons over the evidence those tools
   return and decides: real price, not real (and why), or unsure.
