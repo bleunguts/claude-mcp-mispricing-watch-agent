@@ -24,6 +24,7 @@ Tools, MVP scope and phases are in ROADMAP.md. Requirements draft is in docs/REQ
 - **Hand-code the loop.** Use `client.Messages.Create` and handle `tool_use` -> MCP `CallToolAsync` -> `tool_result` -> repeat until `end_turn`. No `IChatClient` + `UseFunctionInvocation()`.
 - The MCP server contains **no LLM calls**. Deterministic C# only.
 - stdio transport: **log to stderr only**. stdout is the protocol channel.
+- **Docs are additive for now.** Roadmap and README are deliberately bloated idea dumps. Never delete or rewrite earlier content (the original proposal took long to iterate); add new material alongside it with mapping notes. Consolidation happens only after the MVP, when I ask.
 - **Build the MVP first.** Scope is defined in ROADMAP.md; later phases wait until the MVP works end to end.
 - **Ground-truth labels never reach the agent.** Tools must not leak the scenario label. Scoring answers live in a gitignored `GROUND_TRUTH.md`; don't read or reproduce it.
 - Guardrails: the agent is read-only analysis, and caps loop iterations.
