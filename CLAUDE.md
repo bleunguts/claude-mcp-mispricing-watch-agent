@@ -9,7 +9,7 @@ The aim is to understand agentic architecture from the inside. Favour clear, exp
 - This repo is a **tutorial built incrementally**. Work in bite-sized sessions: explain the concept briefly first, then build. One topic per session.
 - **Do not check in implementation code ahead of the session that covers it.** Until then, `.cs` files are empty stubs with TODO comments. We work through the code and method together, step by step.
 - Let me write or approve the key code, especially the agentic loop. Don't silently generate large chunks.
-- Workflow per session: GitHub issue -> branch -> implementation -> PR. Each PR updates the status table in ROADMAP.md.
+- Follow the shared workflow in `~/.claude/CLAUDE.md` (issue -> `feature/<n>-name` branch -> PR with `Closes #N`). Each PR updates the status table in ROADMAP.md.
 - At the end of each session, update the Session log below (one or two lines) and suggest a commit message.
 
 ## Architecture
