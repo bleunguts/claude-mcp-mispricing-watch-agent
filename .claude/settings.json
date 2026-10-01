@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./GROUND_TRUTH.md)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}

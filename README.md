@@ -20,8 +20,8 @@ problem instead of CI tooling.
 
 ## Status
 
-🚧 Early scaffold. Repo structure and planning docs are in place; implementation
-hasn't started. See [`roadmap.md`](./roadmap.md) for the full spec, open design
+🚧 Scaffold complete (Session 1): solution and empty projects build; no implementation yet.
+Implementation proceeds as an incremental tutorial. See [`ROADMAP.md`](./ROADMAP.md) for the full spec, open design
 questions, and the session-by-session plan.
 
 ## Why this is a hard problem
@@ -36,7 +36,7 @@ fixed move-size threshold — is the actual problem this agent solves.
 ## Architecture
 
 ```
-┌──────────────────────── MispricingWatch.sln ────────────────────────┐
+┌──────────────────────── MispricingWatch.slnx ────────────────────────┐
 │                                                                      │
 │  MispricingWatch.Agent  (tool ORCHESTRATOR)                         │
 │   ├─ AnthropicClient ── Messages API (hand-written loop)            │
@@ -47,11 +47,11 @@ fixed move-size threshold — is the actual problem this agent solves.
 │   check_parallel_shift · check_curve_smoothness · check_mispricing  │
 │        │                                                             │
 │        ▼                                                             │
-│   sandbox/CurveLab (synthetic yield-curve simulator, labeled data)  │
+│   src/MispricingWatch.CurveLab (simulator library, labeled data)    │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
 ## Getting started
 
-See [`roadmap.md`](./roadmap.md) for the simulator design, tool specs, and the
+See [`ROADMAP.md`](./ROADMAP.md) for the simulator design, tool specs, and the
 phased build plan. Start at Phase 1 (simulator).

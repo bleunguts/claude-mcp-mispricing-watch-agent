@@ -82,6 +82,8 @@ label for later scoring:
 - Whether `check_market_events` is worth building or cut for scope
 - Report format details (Excel vs. something else)
 
+**Status:** Session 1 (scaffold) complete. Phase 1 (CurveLab simulator) next. Tests project is added in Phase 1.
+
 ## Phased plan
 
 | Phase | Content | Needs API credits? |
