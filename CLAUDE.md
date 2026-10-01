@@ -1,7 +1,7 @@
 # MispricingWatch - MCP + Agentic Mispricing Detector
 
 ## What this is
-A C#/.NET agent that watches a simulated yield curve and flags pricing-graph mispricing (stale node, misapplied calibration, scaling bug), as opposed to genuine market moves. Two parts: an MCP server (tool **producer**) and a hand-coded agentic loop that consumes it as an MCP client (tool **orchestrator**). Companion to `claude-mcp-flaky-test-agent`.
+A C#/.NET agent that decides whether a published price is a real market price or a pricing-system defect, and why (changed dial, missing release, stale feed, scaling bug), using a benchmark, neighbouring nodes and per-node calibrated tolerances rather than one fixed threshold. Two parts: an MCP server (tool **producer**) and a hand-coded agentic loop that consumes it as an MCP client (tool **orchestrator**). Companion to `claude-mcp-flaky-test-agent`.
 
 The aim is to understand agentic architecture from the inside. Favour clear, explicit code whose design I can walk someone through, over clever abstractions.
 
@@ -18,12 +18,13 @@ src/MispricingWatch.Agent      -> tool ORCHESTRATOR: Anthropic C# SDK (Messages 
 src/MispricingWatch.McpServer  -> tool PRODUCER: ModelContextProtocol C# SDK, stdio transport, [McpServerTool] handlers
 src/MispricingWatch.CurveLab   -> library: synthetic yield-curve simulator with hidden ground-truth labels
 ```
-Tools are listed in ROADMAP.md. Tests project is deferred to Phase 1.
+Tools, MVP scope and phases are in ROADMAP.md. Requirements draft is in docs/REQUIREMENTS.md. Tests project is added in Phase 1.
 
 ## Hard rules
 - **Hand-code the loop.** Use `client.Messages.Create` and handle `tool_use` -> MCP `CallToolAsync` -> `tool_result` -> repeat until `end_turn`. No `IChatClient` + `UseFunctionInvocation()`.
 - The MCP server contains **no LLM calls**. Deterministic C# only.
 - stdio transport: **log to stderr only**. stdout is the protocol channel.
+- **Build the MVP first.** Scope is defined in ROADMAP.md; later phases wait until the MVP works end to end.
 - **Ground-truth labels never reach the agent.** Tools must not leak the scenario label. Scoring answers live in a gitignored `GROUND_TRUTH.md`; don't read or reproduce it.
 - Guardrails: the agent is read-only analysis, and caps loop iterations.
 
@@ -40,3 +41,4 @@ Status, phases and open design questions live in [ROADMAP.md](ROADMAP.md), the s
 
 ## Session log
 - Session 1 (complete): repo scaffold - solution, three empty projects (CurveLab library, McpServer, Agent), CLAUDE.md, .gitignore, settings. No implementation. Next: Phase 1 (CurveLab simulator design).
+- Session 2 (in progress): design discussion folded into ROADMAP.md (two-stage diagnosis, spread-based per-node tolerances, MVP scope, re-phased plan); docs/REQUIREMENTS.md skeleton added. Docs only. Next: Phase 0, complete requirements with real pricing knowledge.
