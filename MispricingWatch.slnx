@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MispricingWatch.Agent/MispricingWatch.Agent.csproj" />
+    <Project Path="src/MispricingWatch.CurveLab/MispricingWatch.CurveLab.csproj" />
+    <Project Path="src/MispricingWatch.McpServer/MispricingWatch.McpServer.csproj" />
+  </Folder>
+</Solution>
