@@ -139,7 +139,7 @@ The ground-truth labels never reach the agent. The alarm is emitted as an OpenTe
 
 | File | What is in it |
 |---|---|
-| [`ROADMAP.md`](./ROADMAP.md) | Problem framing, design principles, MVP scope, phases, open questions. Includes the original proposal. |
+| [`ROADMAP.md`](./ROADMAP.md) | Problem framing, design principles, MVP scope, phases, open questions. |
 | [`docs/REQUIREMENTS.md`](./docs/REQUIREMENTS.md) | Requirements answers and the MVP versions (v1 to v3). |
 | [`CLAUDE.md`](./CLAUDE.md) | Working rules and session log. |
 
