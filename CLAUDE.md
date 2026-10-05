@@ -43,3 +43,4 @@ Status, phases and open design questions live in [ROADMAP.md](ROADMAP.md), the s
 ## Session log
 - Session 1 (complete): repo scaffold - solution, three empty projects (CurveLab library, McpServer, Agent), CLAUDE.md, .gitignore, settings. No implementation. Next: Phase 1 (CurveLab simulator design).
 - Session 2 (in progress): design discussion folded into ROADMAP.md (two-stage diagnosis, spread-based per-node tolerances, MVP scope, re-phased plan); docs/REQUIREMENTS.md skeleton added. Docs only. Next: Phase 0, complete requirements with real pricing knowledge.
+- Session 4 (in progress): README redesigned as a colourful visual overview using GitHub-native features (badges, alerts, Mermaid, SVG charts); previous README kept in a collapsed section. Docs only.

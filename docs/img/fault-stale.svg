@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 64" width="280" height="128" role="img" aria-label="Published price goes flat while the benchmark keeps moving">
+  <style>
+    .pub{fill:none;stroke:#f59e0b;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+    .bm{fill:none;stroke:#8a8799;stroke-width:2;stroke-dasharray:5 4;stroke-linejoin:round}
+    .mark{stroke:#8a8799;stroke-width:1;stroke-dasharray:2 3}
+    .t{font-family:ui-monospace,Consolas,monospace;font-size:9px;font-weight:700;fill:#8a8799}
+  </style>
+  <line class="mark" x1="55" y1="4" x2="55" y2="60"/><text class="t" x="58" y="12">T</text>
+  <polyline class="bm" points="0,44 20,40 40,38 55,34 75,26 95,30 115,18 140,12"/>
+  <polyline class="pub" points="0,45 20,41 40,38 55,35 140,35"/>
+</svg>
