@@ -135,6 +135,33 @@ label for later scoring:
 
 > **Mapping to the MVP:** `get_recent_snapshots` -> `get_history`; `compute_tenor_volatility` -> `compute_spread_stats` (calibrated sigma + standardised score); new in MVP: `get_benchmark`, `check_stale`, `get_change_log`. `check_parallel_shift`, `check_curve_smoothness` (-> butterflies / neighbour residuals), `check_mispricing` (design still TBD), `check_market_events` and `generate_report` are post-MVP.
 
+## Requirements findings (Session 3, additive)
+
+From the first round of real-world answers (details in `docs/REQUIREMENTS.md`):
+
+11. **Alarm fatigue is the central constraint.** About 13 tenors x 4 curves = ~52 nodes;
+    a few false alarms per node check becomes ~150 per pass and the human stops
+    looking. Alert on **incidents** (group nodes that share a cause), require
+    **persistence**, rank by **severity**, and calibrate thresholds from an
+    **alarms-per-day budget** rather than from a sigma rule.
+12. **Benchmarks differ per node.** Some nodes anchor on govt rates (e.g. GoC for
+    2Y/5Y/10Y); others compare with a competitor bank or a market rate. Each node has an
+    anchor type and a trust level; competitor/scraped rates are weak evidence.
+13. **The cause space is a pipeline.** `Bloomberg -> MarketFlow -> MQ -> PricingService
+    -> calc graph -> calc graph config`, plus platform/infra changes (.NET or quant
+    library upgrades). "Why" has a second dimension: **which stage**. Post-MVP idea:
+    add a pipeline-stage label to each fault and, if per-hop values are observable,
+    localise by where the divergence first appears.
+14. **A wrong upstream source is a defect** even when nothing in our code changed.
+15. **Change and release logs are indicative only.** No one-to-one mapping between a
+    code change and a price change, so `get_change_log` returns candidates near the
+    onset with low trust.
+16. **History window is 1 month up to 1 year** in the manual method, so the simulator
+    and calibration should support months of history, not only days.
+
+Plain-language MVP and a draft v2 are in `docs/REQUIREMENTS.md` section 6; v1 below is
+unchanged.
+
 ## Minimum viable product (MVP)
 
 The thinnest slice that exercises the whole architecture (simulator, MCP tools,
@@ -228,6 +255,7 @@ The agent never sees the ground-truth label. Tools must not leak it.
   tools have something real to inspect.)
 - Verdict format and how `unsure` is handled operationally (who gets alerted).
 - Report format (Excel vs something else), deferred.
+- Session 3: is the price observable at each pipeline hop, or only the final published price? Who receives the alarm, and what is the false-alarm budget in numbers? Which costs more, a false alarm or a miss?
 - Original (retained): `check_mispricing` exact signature, what pricing-graph config/state it checks against, and whether it is a single tool or several; whether `check_market_events` is worth building or cut for scope; report format details (Excel vs. something else).
 
 ## Interview narrative
