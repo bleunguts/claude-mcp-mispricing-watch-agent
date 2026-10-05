@@ -18,13 +18,13 @@ src/MispricingWatch.Agent      -> tool ORCHESTRATOR: Anthropic C# SDK (Messages 
 src/MispricingWatch.McpServer  -> tool PRODUCER: ModelContextProtocol C# SDK, stdio transport, [McpServerTool] handlers
 src/MispricingWatch.CurveLab   -> library: synthetic yield-curve simulator with hidden ground-truth labels
 ```
-Tools, MVP scope and phases are in ROADMAP.md. Requirements draft is in docs/REQUIREMENTS.md. Tests project is added in Phase 1.
+Tools, MVP scope and phases are in ROADMAP.md. Tests project is added in Phase 1.
 
 ## Hard rules
 - **Hand-code the loop.** Use `client.Messages.Create` and handle `tool_use` -> MCP `CallToolAsync` -> `tool_result` -> repeat until `end_turn`. No `IChatClient` + `UseFunctionInvocation()`.
 - The MCP server contains **no LLM calls**. Deterministic C# only.
 - stdio transport: **log to stderr only**. stdout is the protocol channel.
-- **Docs are additive for now.** Roadmap and README are deliberately bloated idea dumps. Never delete or rewrite earlier content (the original proposal took long to iterate); add new material alongside it with mapping notes. Consolidation happens only after the MVP, when I ask.
+- **Keep docs lean.** ROADMAP.md and README.md read as short, plain prose. The original proposal lives in git history (first commit) and in my local copy, not in the repo. Don't re-add clutter or parallel versions of the same content.
 - **Build the MVP first.** Scope is defined in ROADMAP.md; later phases wait until the MVP works end to end.
 - **Ground-truth labels never reach the agent.** Tools must not leak the scenario label. Scoring answers live in a gitignored `GROUND_TRUTH.md`; don't read or reproduce it.
 - Guardrails: the agent is read-only analysis, and caps loop iterations.
@@ -42,7 +42,8 @@ Status, phases and open design questions live in [ROADMAP.md](ROADMAP.md), the s
 
 ## Session log
 - Session 1 (complete): repo scaffold - solution, three empty projects (CurveLab library, McpServer, Agent), CLAUDE.md, .gitignore, settings. No implementation. Next: Phase 1 (CurveLab simulator design).
-- Session 2 (in progress): design discussion folded into ROADMAP.md (two-stage diagnosis, spread-based per-node tolerances, MVP scope, re-phased plan); docs/REQUIREMENTS.md skeleton added. Docs only. Next: Phase 0, complete requirements with real pricing knowledge.
-- Session 3 (in progress): first real-world answers recorded in docs/REQUIREMENTS.md and ROADMAP.md (per-node benchmark anchors, pipeline-wide cause space, alarm-fatigue budget); MVP restated in plain language with a draft v2. Docs only. Next: user reacts to draft v2 MVP, then Phase 1 design.
+- Session 2 (in progress): design discussion folded into ROADMAP.md (two-stage diagnosis, spread-based per-node tolerances, MVP scope, re-phased plan); a requirements doc added (later folded into ROADMAP.md). Docs only. Next: Phase 0, complete requirements with real pricing knowledge.
+- Session 3 (in progress): first real-world answers recorded in the requirements doc and ROADMAP.md (per-node benchmark anchors, pipeline-wide cause space, alarm-fatigue budget); MVP restated in plain language with a draft v2. Docs only. Next: user reacts to draft v2 MVP, then Phase 1 design.
   Round 3: MVP v3 agreed direction (binary alarm, lean tools without change log, emit OpenTelemetry, scorecard 80% precision / 5% miss), node mix open. Next: merge PR, then Phase 1 design.
 - Session 4 (in progress): README redesigned as a colourful visual overview using GitHub-native features (badges, alerts, Mermaid, SVG charts); previous README kept in a collapsed section. Docs only.
+- Session 5 (in progress): docs consolidated. ROADMAP.md rewritten as lean prose with both narratives, folded-in requirements and the history-based secondary detector (fifth MVP tool, fallback when no benchmark); the separate requirements doc removed. Docs only. Next: Phase 1, simulator design conversation.
