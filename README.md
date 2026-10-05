@@ -4,7 +4,7 @@
 
 ### Is this published price real, or is our pricing system wrong?
 
-![Phase](https://img.shields.io/badge/phase-0%20requirements-ee4fa0?style=for-the-badge)
+![Phase](https://img.shields.io/badge/next-phase%201%20simulator-ee4fa0?style=for-the-badge)
 ![MVP](https://img.shields.io/badge/MVP-v3%20scoped-1fbf75?style=for-the-badge)
 ![.NET](https://img.shields.io/badge/.NET-10-8b5cf6?style=for-the-badge)
 ![MCP](https://img.shields.io/badge/MCP-tool%20producer-3b82f6?style=for-the-badge)
@@ -47,7 +47,7 @@ flowchart LR
 ## 🟪 How the agent decides
 
 > [!IMPORTANT]
-> Five rules, no magic number.
+> Six rules, no magic number.
 
 | Rule | What it means |
 |---|---|
@@ -56,6 +56,7 @@ flowchart LR
 | **Must persist** | One odd tick is ignored. The gap has to hold. |
 | **One cause, one alarm** | Ten nodes broken by the same thing is a single alarm. |
 | **Budget first** | Pick how many false alarms you can live with, then derive the tolerance. |
+| **Second opinion from history** | Is the price outside the middle 90% of the node's own 1W, 1M or 3M? Also the fallback when a node has no benchmark, such as a 3W tenor. |
 
 ## 🟨 What faults look like
 
@@ -106,12 +107,13 @@ flowchart LR
   classDef g fill:#1fbf75,stroke:#0f8a52,color:#0b2a1b
 ```
 
-| Fake world | Four tools | Pass mark | Left out on purpose |
+| Fake world | Five tools | Pass mark | Left out on purpose |
 |---|---|---|---|
 | One small curve, about a month of history | `get_history` | At least 80% of alarms are real | Change log tool |
-| A benchmark series | `get_benchmark` | At most 5% of faults missed | Wire price |
+| A benchmark series, and one node with none | `get_benchmark` | At most 5% of faults missed | Wire price |
 | Planted faults: stale, unit error, setting change | `compute_spread_stats` | Beats a plain fixed-threshold rule | Cause labels |
-| Real market moves that must stay quiet | `check_stale` | | Futures and swaps seam, several curves, web benchmarks, Excel report |
+| Real market moves that must stay quiet | `compute_history_outlier` | | Futures and swaps seam |
+| | `check_stale` | | Several curves, web benchmarks, Excel report |
 
 The ground-truth labels never reach the agent. The alarm is emitted as an OpenTelemetry record; a local viewer (Grafana or the .NET Aspire dashboard) is chosen later.
 
@@ -119,8 +121,8 @@ The ground-truth labels never reach the agent. The alarm is emitted as an OpenTe
 
 | Phase | What | Status |
 |---|---|---|
-| **0** | **Requirements.** Sign off the MVP. | 👈 **you are here** |
-| 1 | Simulator: fake curve, planted faults, hidden answers. Tests added. | MVP |
+| 0 | Requirements and MVP scope. | ✅ done |
+| 1 | Simulator: fake curve, planted faults, hidden answers. Tests added. | 👈 **next** (MVP) |
 | 2 | MCP tools, tried in MCP Inspector. | MVP |
 | 3 | Agent loop and scoring. Needs API credits. | MVP |
 | 4 | Calibration: per-node tolerance from history, alarm budget. | later |
@@ -130,17 +132,16 @@ The ground-truth labels never reach the agent. The alarm is emitted as an OpenTe
 
 ## ❓ Open decisions
 
-- [ ] Which nodes the MVP curve uses (placeholder: 2Y, 5Y, 10Y against a government benchmark, plus one long node against a noisier competitor rate)
-- [ ] Confirm the error targets: under 20% of alarms false, at most 5% of real faults missed
-- [ ] Confirm the MVP outputs alarm or no alarm only, with no cause label
-- [ ] Confirm wire price waits until after the MVP
+- [ ] Which nodes the MVP curve uses (placeholder: 2Y, 5Y, 10Y against a government benchmark, one long node against a noisier competitor rate, and one node with no benchmark)
+- [ ] Whether the history check may raise an alarm on its own (the scorecard will decide)
+- [ ] The history confidence level and how many ticks an outlier must persist
+- [ ] Local OpenTelemetry viewer: Grafana or the .NET Aspire dashboard
 
 ## 📚 Docs
 
 | File | What is in it |
 |---|---|
-| [`ROADMAP.md`](./ROADMAP.md) | Problem framing, design principles, MVP scope, phases, open questions. |
-| [`docs/REQUIREMENTS.md`](./docs/REQUIREMENTS.md) | Requirements answers and the MVP versions (v1 to v3). |
+| [`ROADMAP.md`](./ROADMAP.md) | Purpose, intended narrative, requirements, how the agent decides, MVP scope, phases, open questions. |
 | [`CLAUDE.md`](./CLAUDE.md) | Working rules and session log. |
 
 Source layout: `src/MispricingWatch.CurveLab` (simulator library), `src/MispricingWatch.McpServer` (tool producer), `src/MispricingWatch.Agent` (tool orchestrator). All currently empty stubs with TODO comments.
