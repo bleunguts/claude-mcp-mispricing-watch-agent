@@ -20,6 +20,13 @@ for the real constraint: the alarm must be rare enough to stay usable.
 Still open: who the human is (price-monitoring desk, quant support, release managers)
 and the response time that matters.
 
+**Answer (Session 3, round 2):** alerting and who receives it is an **implementation
+detail** and out of scope. In reality alarms live in a monitoring platform (Grafana,
+Splunk or Elastic alarm rules). A .NET app can emit **OpenTelemetry** so any of those
+plug in. Design consequence: the agent's output is a **structured incident record**
+(verdict, cause, evidence, severity, affected nodes) shaped to be emitted as telemetry.
+The MVP just produces the record; wiring it to OpenTelemetry is post-MVP.
+
 ## 3. Inputs available in practice
 TODO: confirm for the real environment.
 - Published price history per node (intraday to ~2 weeks): assumed available.
@@ -62,6 +69,21 @@ TODO: confirm for the real environment.
 Still open: is the value observable at each hop (so a divergence can be localised to
 a stage), or only the final published price? Is a feed timestamp available per hop?
 
+**Answer (Session 3, round 2):** definitely the **final published price**, and there are
+**hooks to the MarketData service sources**, i.e. the prices coming off the wire (e.g.
+Bloomberg) as well as the published prices. So we do **not** have per-hop values inside
+the pipeline, but we do have **two observable points**: the wire price (input) and the
+published price (output). That gives a useful two-gap diagnosis:
+
+- **published - wire** isolates our own pipeline (MarketFlow through calc graph and
+  config). Not zero, since a published price carries bank adjustments, but the
+  relationship should be structured and learnable per node, so a break in it points at
+  our side.
+- **wire - independent benchmark** isolates the source: if the wire price itself is off
+  the benchmark, the defect is upstream.
+
+Per-stage localisation inside the pipeline stays post-MVP and limited by this.
+
 ## 4. Decision taxonomy
 Verdict: `real` / `not_real` / `unsure`. Causes: see ROADMAP.md ("Problem framing").
 TODO: what does each verdict trigger operationally? How costly is a false alarm
@@ -90,6 +112,20 @@ versus a missed mispricing?
      the whole curve set) and derive thresholds from it, not the other way round.
 - Which costs more, a false alarm or a missed mispricing? Not stated yet; the answer
   sets how aggressive the budget can be. Open.
+
+**Answer (Session 3, round 2):** the target is **fewer than 20% false alarms** to limit
+manual checking cost. A **missed mispricing is catastrophic for the engineer
+responsible** (that is the role), but not unrecoverable: traders will often catch and
+report it, so it must be **the exception, not the norm**. Error rate: **5% target, 10%
+maximum; above that is "rubbish"**. The budget is expected to **evolve** over time.
+
+Working interpretation (to confirm):
+- **False-alarm share <= 20%** of alarms raised (i.e. precision >= 80%).
+- **Miss rate <= 5% target, 10% hard limit** of real planted faults.
+- These are fractions of alarms and faults, so they sit alongside the alarms-per-day
+  volume sizing above, not instead of it. With real faults rare, even a small
+  false-positive rate per tick swamps true alarms, which is why persistence and
+  incident grouping stay necessary.
 
 ## 5. Tolerances and calibration
 Approach agreed in principle (ROADMAP.md, design principles 1-4). TODO: realistic
@@ -157,3 +193,8 @@ Tracked in ROADMAP.md ("Open design questions"). New from Session 3:
 - The false-alarm budget in numbers.
 - Which costs more: a false alarm or a missed mispricing?
 - Do you agree with the draft v2 MVP above?
+
+Status after round 2: alert recipient = out of scope (monitoring platform);
+pipeline-hop visibility = answered (wire + published only); false-alarm budget and
+miss tolerance = answered (see section 4, interpretation to confirm); draft v2 MVP =
+being reviewed.

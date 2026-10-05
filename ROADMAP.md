@@ -159,6 +159,15 @@ From the first round of real-world answers (details in `docs/REQUIREMENTS.md`):
 16. **History window is 1 month up to 1 year** in the manual method, so the simulator
     and calibration should support months of history, not only days.
 
+17. **Alerting is out of scope; emit OpenTelemetry-shaped incident records.** Alarm rules
+    live in Grafana/Splunk/Elastic. The agent's output is a structured record
+    (verdict, cause, evidence, severity, affected nodes). Wiring is post-MVP.
+18. **Two observable points: wire price and published price.** No per-hop values.
+    `published - wire` isolates our pipeline; `wire - benchmark` isolates the source.
+19. **Targets:** < 20% false alarms; miss rate 5% target, 10% max (misses are
+    catastrophic but traders usually catch them, so they must be rare). Expected to
+    evolve.
+
 Plain-language MVP and a draft v2 are in `docs/REQUIREMENTS.md` section 6; v1 below is
 unchanged.
 
