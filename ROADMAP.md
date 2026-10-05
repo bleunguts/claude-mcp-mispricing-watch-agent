@@ -197,6 +197,13 @@ benchmark, Excel report, confidence scores.
 baseline on the same simulator data, and its verdicts are explainable from the
 evidence it cites.
 
+> **Session 3 update (MVP v3, see `docs/REQUIREMENTS.md` section 6):** the MVP is
+> leaner than described above: the change log tool is dropped, output is a binary alarm
+> emitted as an OpenTelemetry record (no cause attribution yet), and the node/anchor mix
+> is left open pending the user's investigation. Scorecard: >= 80% of alarms real,
+> <= 5% of planted faults missed (10% limit), beats a fixed-threshold baseline. Wire
+> price (`published - wire`) is the first post-MVP addition. v1 above is kept as-is.
+
 ## Phases (revised in Session 2)
 
 | Phase | Content | API credits? | Status |
@@ -264,6 +271,7 @@ The agent never sees the ground-truth label. Tools must not leak it.
   tools have something real to inspect.)
 - Verdict format and how `unsure` is handled operationally (who gets alerted).
 - Report format (Excel vs something else), deferred.
+- Session 3: which anchor types and nodes the MVP curve uses is left open for the user to investigate (v2's govt-plus-competitor mix is a placeholder). Local OpenTelemetry viewer (Grafana stack vs .NET Aspire Dashboard) to be chosen in the agent phase.
 - Session 3: is the price observable at each pipeline hop, or only the final published price? Who receives the alarm, and what is the false-alarm budget in numbers? Which costs more, a false alarm or a miss?
 - Original (retained): `check_mispricing` exact signature, what pricing-graph config/state it checks against, and whether it is a single tool or several; whether `check_market_events` is worth building or cut for scope; report format details (Excel vs. something else).
 

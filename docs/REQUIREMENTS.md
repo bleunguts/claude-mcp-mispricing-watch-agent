@@ -178,6 +178,27 @@ and a scorecard. Everything else in the roadmap is added after this works.
 - **Deliberately not in the MVP:** pipeline-stage localisation (needs per-hop values we
   may not have), futures and the seam, multiple curves, web scraping for benchmarks.
 
+### MVP v3 (Session 3, round 3: current direction)
+Supersedes v2 where they differ; v1 (ROADMAP.md) and v2 above are kept for reference.
+
+1. **Node mix: open.** The choice of anchor types and nodes (e.g. govt-anchored 2Y/5Y/10Y
+   plus a competitor-anchored long node) needs real-world investigation by the user.
+   Treat v2's mix as a placeholder; simulator parameters stay configurable.
+2. **Output is just an alarm.** The MVP answers "alarm or no alarm" per incident.
+   Cause attribution and the `unsure` verdict are post-MVP; an optional free-text
+   rationale is fine. The planted faults stay the same (stale price, unit/scaling
+   error, config-style price shift), and real market moves must not alarm.
+3. **Lean tools, no change log.** Dropped from the MVP as a distraction (indicative
+   only, noisy). Tools: `get_history`, `get_benchmark`, `compute_spread_stats`,
+   `check_stale`. The wire price (`published - wire`) is the first post-MVP addition.
+4. **Just emit.** The agent emits the alarm as an OpenTelemetry record and nothing else
+   (no paging or email). A local viewer is chosen later: either a Grafana stack or the
+   .NET-native OpenTelemetry dashboard (believed to be the .NET Aspire Dashboard, a
+   standalone OTLP receiver; to verify when we get there).
+5. **Scorecard (agreed for now):** at least 80% of alarms real (<= 20% false), at most
+   5% of planted faults missed (10% hard limit), and better than a fixed-threshold
+   baseline.
+
 ## 7. Evaluation plan
 Precision/recall and cause accuracy against simulator ground truth, compared with a
 fixed-threshold baseline. TODO: define the scoring cases, including red herrings (a
