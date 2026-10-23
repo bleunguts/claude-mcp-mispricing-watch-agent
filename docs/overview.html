@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mispricing Watch Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one column of colour-coded sections. Each section owns one hue so the eye can find its place. */
+:root{
+  --bg:#fbf8f3; --fg:#1d1b2b; --muted:#6a6577; --card:#ffffff; --line:#e4ddd0;
+  --coral:#ff5c5c; --amber:#ffb020; --green:#1fbf75; --teal:#16b8c4; --blue:#3b82f6; --violet:#8b5cf6; --pink:#ee4fa0;
+  --ok:#128a52; --bad:#d6283a;
+  --f-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121d; --fg:#f2eefc; --muted:#a49db8; --card:#1f1c2d; --line:#35304a;
+    --coral:#ff7a7a; --amber:#ffc24d; --green:#3ad78f; --teal:#3ed3de; --blue:#6ea3ff; --violet:#a98bff; --pink:#ff7bbd;
+    --ok:#3ad78f; --bad:#ff7a86; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121d; --fg:#f2eefc; --muted:#a49db8; --card:#1f1c2d; --line:#35304a;
+  --coral:#ff7a7a; --amber:#ffc24d; --green:#3ad78f; --teal:#3ed3de; --blue:#6ea3ff; --violet:#a98bff; --pink:#ff7bbd;
+  --ok:#3ad78f; --bad:#ff7a86; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;margin:0;padding-inline:16px;padding-block:28px 64px}
+.wrap{max-width:860px;margin-inline:auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2.4rem,7vw,3.8rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.5rem,4vw,2rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0}
+a{color:inherit}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:14px;padding-block:8px 4px}
+.eyebrow{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hero .q{font-size:clamp(1.15rem,3vw,1.45rem);max-width:30ch;font-weight:500}
+.status{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:.85rem;font-weight:700;
+  background:color-mix(in srgb,var(--a,var(--muted)) 20%,var(--bg));color:color-mix(in srgb,var(--a,var(--muted)) 55%,var(--fg));
+  border:1.5px solid color-mix(in srgb,var(--a,var(--muted)) 55%,var(--bg))}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--a,var(--muted))}
+
+/* sections */
+.sec{--a:var(--blue);display:flex;flex-direction:column;gap:16px;padding:22px 20px;border-radius:22px;
+  background:color-mix(in srgb,var(--a) 11%,var(--bg));border:2px solid color-mix(in srgb,var(--a) 40%,var(--bg))}
+.tag{align-self:flex-start;font-family:var(--f-mono);font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:4px 10px;border-radius:6px;background:var(--a);color:#14121d}
+.lead{font-size:1.08rem;max-width:62ch}
+.sec ul{margin:0;padding-left:1.15em;display:flex;flex-direction:column;gap:6px;max-width:64ch}
+.sec li::marker{color:var(--a);font-weight:700}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{display:flex;align-items:center;gap:8px}
+.card p{font-size:.95rem;color:var(--muted)}
+.card .big{font-family:var(--f-mono);font-weight:700;font-size:1.9rem;line-height:1;color:color-mix(in srgb,var(--a) 70%,var(--fg))}
+.callout{background:var(--card);border:2px dashed color-mix(in srgb,var(--a) 70%,var(--bg));border-radius:12px;padding:12px 16px;font-weight:700}
+
+/* pipeline */
+.pipe{display:flex;flex-wrap:wrap;gap:10px 6px;align-items:stretch}
+.step{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:700;font-size:.92rem;display:flex;flex-direction:column;gap:4px;min-width:0}
+.step small{font-family:var(--f-mono);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.step.seen{border-color:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 28%,transparent)}
+.step.seen small{color:color-mix(in srgb,var(--a) 70%,var(--fg))}
+.arrow{align-self:center;color:var(--muted);font-weight:700}
+.under{font-size:.9rem;color:var(--muted)}
+
+/* fault charts */
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.chart{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.chart svg{width:100%;height:auto;display:block}
+.pub{fill:none;stroke:var(--a);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
+.bm{fill:none;stroke:var(--muted);stroke-width:2;stroke-dasharray:5 4;stroke-linejoin:round}
+.mark{stroke:var(--fg);stroke-width:1;stroke-dasharray:2 3;opacity:.55}
+.svgtxt{font-family:var(--f-mono);font-size:9px;fill:var(--fg);font-weight:700}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:26px;height:0;border-top:3px solid var(--a);vertical-align:middle;margin-right:6px;border-radius:2px}
+.legend i.d{border-top:2px dashed var(--muted)}
+.verdict{align-self:flex-start;font-size:.78rem;font-weight:700;padding:2px 9px;border-radius:999px;font-family:var(--f-mono)}
+.verdict.no{background:color-mix(in srgb,var(--ok) 22%,var(--card));color:var(--ok)}
+.verdict.yes{background:color-mix(in srgb,var(--bad) 22%,var(--card));color:var(--bad)}
+
+/* flow */
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.flow .step{flex:1 1 130px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.cols .card ul{padding-left:1.1em;gap:4px;font-size:.95rem}
+.out li{color:var(--muted)}
+
+/* roadmap */
+.road{display:flex;flex-direction:column;gap:8px}
+.ph{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px}
+.ph b.n{font-family:var(--f-mono);font-size:1.1rem;color:color-mix(in srgb,var(--a) 70%,var(--fg))}
+.ph.now{border-color:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 28%,transparent)}
+.ph.mvp{background:color-mix(in srgb,var(--green) 10%,var(--card))}
+.ph span.t{min-width:0}
+.ph small{color:var(--muted);display:block;font-size:.85rem}
+.mvpline{font-family:var(--f-mono);font-size:.78rem;font-weight:700;letter-spacing:.08em;color:var(--green);text-transform:uppercase;padding-left:4px}
+
+/* checklist */
+.todo{display:flex;flex-direction:column;gap:10px}
+.todo label{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer}
+.todo input{width:22px;height:22px;margin-top:2px;accent-color:var(--a);flex:none}
+.todo b{display:block}
+.todo span{color:var(--muted);font-size:.93rem}
+.todo input:checked + div b{text-decoration:line-through;opacity:.6}
+.prog{font-family:var(--f-mono);font-weight:700}
+.todo input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+footer{color:var(--muted);font-size:.9rem;display:flex;flex-direction:column;gap:6px;padding-top:6px}
+@media (prefers-reduced-motion:no-preference){.chip,.card{transition:transform .15s}.card:hover{transform:translateY(-2px)}}
+</style>
+
+</head><body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Yield-curve pricing · MCP server + agent loop</div>
+  <h1>Mispricing Watch</h1>
+  <p class="q">Is this published price real, or is our pricing system wrong?</p>
+  <div class="status">
+    <span class="chip" style="--a:var(--green)"><span class="dot"></span>Scaffold and requirements done</span>
+    <span class="chip" style="--a:var(--amber)"><span class="dot"></span>Next: Phase 1 simulator</span>
+    <span class="chip" style="--a:var(--violet)"><span class="dot"></span>No simulator code yet, by design</span>
+  </div>
+</header>
+
+<section class="sec" style="--a:var(--coral)">
+  <span class="tag">The problem</span>
+  <h2>A wrong rate goes public fast</h2>
+  <ul class="lead">
+    <li>The bank publishes rates. They flow straight to the public and to Bloomberg.</li>
+    <li>A price far from where it was an hour ago can still be right. Markets move.</li>
+    <li>The agent raises an alarm when the <b>pricing system itself</b> looks broken. A human then checks.</li>
+  </ul>
+  <div class="callout">Win condition: few alarms, almost all real.</div>
+</section>
+
+<section class="sec" style="--a:var(--blue)">
+  <span class="tag">Where a price travels</span>
+  <h2>We can see the start and the end</h2>
+  <div class="pipe">
+    <div class="step seen"><small>we can see this</small>Bloomberg wire price</div><span class="arrow">→</span>
+    <div class="step">MarketFlow</div><span class="arrow">→</span>
+    <div class="step">MQ</div><span class="arrow">→</span>
+    <div class="step">PricingService</div><span class="arrow">→</span>
+    <div class="step">Calc graph + config</div><span class="arrow">→</span>
+    <div class="step seen"><small>we can see this</small>Published price</div>
+  </div>
+  <p class="under">Underneath it all: .NET and quant library upgrades can also move prices. We cannot see values between the hops.</p>
+  <div class="cards">
+    <div class="card"><h3>published vs benchmark</h3><p>Is the price off the market? <b>The MVP uses this one.</b></p></div>
+    <div class="card"><h3>published vs wire</h3><p>Did our side break it? After the MVP.</p></div>
+    <div class="card"><h3>wire vs benchmark</h3><p>Is the source itself wrong? After the MVP.</p></div>
+  </div>
+</section>
+
+<section class="sec" style="--a:var(--violet)">
+  <span class="tag">How the agent decides</span>
+  <h2>Six rules, no magic number</h2>
+  <div class="cards">
+    <div class="card"><h3>Judge the gap</h3><p>Compare the price with a benchmark. Market moves hit both, so they cancel out.</p></div>
+    <div class="card"><h3>Own normal per node</h3><p>Each tenor learns its normal from its own history, 1 month up to 1 year. The 10Y and 50Y get different tolerances.</p></div>
+    <div class="card"><h3>Must persist</h3><p>One odd tick is ignored. The gap has to hold.</p></div>
+    <div class="card"><h3>One cause, one alarm</h3><p>Ten nodes broken by the same thing is a single alarm.</p></div>
+    <div class="card"><h3>Budget first</h3><p>Pick how many false alarms you can live with, then derive the tolerance.</p></div>
+    <div class="card"><h3>Second opinion from history</h3><p>Is the price outside the middle 90% of the node's own 1W, 1M or 3M? Also the fallback when a node has no benchmark, like a 3W tenor.</p></div>
+  </div>
+</section>
+
+<section class="sec" style="--a:var(--amber)">
+  <span class="tag">What faults look like</span>
+  <h2>Faults have shapes. Market moves do not.</h2>
+  <div class="legend" style="--a:var(--amber)"><span><i></i>published price</span><span><i class="d"></i>benchmark</span></div>
+  <div class="charts" style="--a:var(--amber)">
+    <div class="chart">
+      <svg viewBox="0 0 140 64" role="img" aria-label="Published price and benchmark rise together">
+        <polyline class="bm" points="0,44 20,41 40,37 60,32 80,24 100,18 120,15 140,10"/>
+        <polyline class="pub" points="0,45 20,40 40,38 60,31 80,25 100,17 120,16 140,9"/>
+      </svg>
+      <h3>Real market move</h3><p class="under">Both lines move together. The gap stays flat.</p>
+      <span class="verdict no">no alarm</span>
+    </div>
+    <div class="chart">
+      <svg viewBox="0 0 140 64" role="img" aria-label="Published price steps away from the benchmark at one time and stays offset">
+        <line class="mark" x1="70" y1="4" x2="70" y2="60"/><text class="svgtxt" x="73" y="12">T</text>
+        <polyline class="bm" points="0,30 20,32 40,29 60,31 80,29 100,31 120,29 140,30"/>
+        <polyline class="pub" points="0,31 20,31 40,30 60,32 70,32 71,46 90,45 110,47 140,46"/>
+      </svg>
+      <h3>A setting changed</h3><p class="under">A step at one moment, then a permanent offset.</p>
+      <span class="verdict yes">alarm</span>
+    </div>
+    <div class="chart">
+      <svg viewBox="0 0 140 64" role="img" aria-label="Published price goes flat while the benchmark keeps moving">
+        <line class="mark" x1="55" y1="4" x2="55" y2="60"/><text class="svgtxt" x="58" y="12">T</text>
+        <polyline class="bm" points="0,44 20,40 40,38 55,34 75,26 95,30 115,18 140,12"/>
+        <polyline class="pub" points="0,45 20,41 40,38 55,35 140,35"/>
+      </svg>
+      <h3>Stale price</h3><p class="under">The published line freezes. The benchmark keeps moving.</p>
+      <span class="verdict yes">alarm</span>
+    </div>
+    <div class="chart">
+      <svg viewBox="0 0 140 64" role="img" aria-label="Published price jumps to ten or a hundred times the benchmark">
+        <line class="mark" x1="70" y1="4" x2="70" y2="60"/><text class="svgtxt" x="73" y="12">T</text>
+        <polyline class="bm" points="0,46 20,45 40,47 60,46 80,45 100,47 120,46 140,45"/>
+        <polyline class="pub" points="0,47 20,46 40,46 60,47 70,47 71,8 140,8"/>
+        <text class="svgtxt" x="90" y="24">x100</text>
+      </svg>
+      <h3>Unit or scaling error</h3><p class="under">The gap is a clean power of ten.</p>
+      <span class="verdict yes">alarm</span>
+    </div>
+  </div>
+  <p class="under">Also in the long-term plan: a node that tracks the wrong neighbour, and a bug where futures meet swaps.</p>
+</section>
+
+<section class="sec" style="--a:var(--teal)">
+  <span class="tag">The alarm budget</span>
+  <h2>Too many false alarms and nobody looks</h2>
+  <div class="cards">
+    <div class="card"><div class="big">52</div><h3>nodes</h3><p>13 tenors × about 4 curves.</p></div>
+    <div class="card"><div class="big">~156</div><h3>false alarms per pass</h3><p>If each check cries wolf 3 times. Unusable.</p></div>
+    <div class="card"><div class="big">≤20%</div><h3>of alarms false</h3><p>Your target, to limit manual checking.</p></div>
+    <div class="card"><div class="big">≤5%</div><h3>of real faults missed</h3><p>10% is the hard limit. Above that is rubbish.</p></div>
+  </div>
+  <p class="under">A miss is catastrophic for the engineer, but traders usually catch it. So it must be rare. These targets will evolve.</p>
+</section>
+
+<section class="sec" style="--a:var(--green)">
+  <span class="tag">The MVP</span>
+  <h2>A fake world, planted faults, one question</h2>
+  <div class="flow">
+    <div class="step"><small>1</small>Simulator makes a fake curve</div><span class="arrow">→</span>
+    <div class="step"><small>2</small>Tools serve the evidence</div><span class="arrow">→</span>
+    <div class="step"><small>3</small>Agent decides</div><span class="arrow">→</span>
+    <div class="step"><small>4</small>Alarm emitted as OpenTelemetry</div><span class="arrow">→</span>
+    <div class="step"><small>5</small>Scorecard vs secret answers</div>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>Fake world</h3><ul>
+      <li>One small curve, about a month of history</li>
+      <li>A benchmark series, and one node with none</li>
+      <li>Faults planted at known times: stale, unit error, setting change</li>
+      <li>Real market moves that must stay quiet</li>
+    </ul></div>
+    <div class="card"><h3>Five tools</h3><ul>
+      <li><span class="mono">get_history</span></li>
+      <li><span class="mono">get_benchmark</span></li>
+      <li><span class="mono">compute_spread_stats</span></li>
+      <li><span class="mono">compute_history_outlier</span></li>
+      <li><span class="mono">check_stale</span></li>
+    </ul></div>
+    <div class="card"><h3>Pass mark</h3><ul>
+      <li>At least 80% of alarms are real</li>
+      <li>At most 5% of faults missed</li>
+      <li>Beats a plain fixed-threshold rule</li>
+    </ul></div>
+    <div class="card"><h3>Left out on purpose</h3><ul class="out">
+      <li>Change log tool</li><li>Wire price</li><li>Cause labels</li>
+      <li>Futures and swaps seam</li><li>Several curves</li><li>Web benchmarks, Excel report</li>
+    </ul></div>
+  </div>
+  <p class="under">Output is a plain alarm or no alarm. You may view it later in Grafana or the .NET Aspire dashboard (to be chosen).</p>
+</section>
+
+<section class="sec" style="--a:var(--pink)">
+  <span class="tag">Roadmap</span>
+  <h2>Where we are</h2>
+  <div class="road">
+    <div class="ph"><b class="n">0</b><span class="t"><b>Requirements and MVP scope</b><small>Done.</small></span><span class="chip" style="--a:var(--green)">done</span></div>
+    <div class="mvpline">MVP starts</div>
+    <div class="ph mvp now"><b class="n">1</b><span class="t"><b>Simulator</b><small>Fake curve, planted faults, hidden answers. Tests added.</small></span><span class="chip" style="--a:var(--pink)">next</span></div>
+    <div class="ph mvp"><b class="n">2</b><span class="t"><b>MCP tools</b><small>The five tools, tried in MCP Inspector.</small></span></div>
+    <div class="ph mvp"><b class="n">3</b><span class="t"><b>Agent loop and scoring</b><small>Hand-written loop, OpenTelemetry alarm, scorecard. Needs API credits.</small></span></div>
+    <div class="mvpline">MVP ends</div>
+    <div class="ph"><b class="n">4</b><span class="t"><b>Calibration</b><small>Per-node tolerance from history, alarm budget.</small></span></div>
+    <div class="ph"><b class="n">5</b><span class="t"><b>Futures and swaps</b><small>One unit, and the seam between them.</small></span></div>
+    <div class="ph"><b class="n">6</b><span class="t"><b>Shape and onset</b><small>Butterflies, change points, release log, wire price.</small></span></div>
+    <div class="ph"><b class="n">7</b><span class="t"><b>Polish</b><small>Confidence scores, optional web benchmark, report.</small></span></div>
+  </div>
+  <p class="under">Every phase is split into small sessions. Concept first, then we write the code together.</p>
+</section>
+
+<section class="sec" style="--a:var(--coral)">
+  <span class="tag">Open decisions</span>
+  <h2>Still to settle</h2>
+  <div class="cards">
+    <div class="card"><h3>MVP curve nodes</h3><p>Placeholder: 2Y, 5Y, 10Y against a government benchmark, one long node against a noisier competitor rate, and one node with no benchmark.</p></div>
+    <div class="card"><h3>History alone may alarm?</h3><p>Allowed when no benchmark exists. The scorecard decides if it also helps elsewhere.</p></div>
+    <div class="card"><h3>Confidence and persistence</h3><p>The 90% level and how many ticks an outlier must hold are tuning knobs.</p></div>
+    <div class="card"><h3>Local OpenTelemetry viewer</h3><p>Grafana, or the .NET Aspire dashboard.</p></div>
+  </div>
+</section>
+
+<footer>
+  <span>Details: <span class="mono">ROADMAP.md</span> for the plan and requirements, <span class="mono">CLAUDE.md</span> for working rules.</span>
+  <span>Next step: a design session for the simulator's data model, no code yet.</span>
+</footer>
+
+</div>
+</body></html>
