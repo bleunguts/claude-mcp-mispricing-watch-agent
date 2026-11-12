@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Scaffold, requirements and README are done. Next: Phase 1, the simulator (design conversation first, no code).
+**Status:** Scaffold, requirements and README are done. Phase 1 design is agreed (see below). Next: Phase 1.2, tests project and the seeded market.
 
 ## Purpose
 
@@ -170,6 +170,26 @@ pull request.
 
 The architecture diagram is in the [README](./README.md).
 
+## Phase 1 design
+
+Rule for the MVP: the simplest thing that works. Where unsure, hardcode and revisit.
+
+- **Nodes:** 2Y, 5Y, 10Y (government-style benchmark), 30Y (competitor-style), 3W (no
+  benchmark). Hardcoded list.
+- **Time:** 1-minute ticks, 10-hour day, 21 days, about 12,600 ticks per node. Hardcoded.
+- **Three series per node:** a hidden true rate (one common factor plus node noise),
+  the published price (truth plus small noise), and the benchmark (truth plus its own
+  noise; competitor-style adds a few ticks of delay; none for 3W). Market moves change
+  the truth, so published and benchmark move together. Faults change only the published
+  price.
+- **Faults:** a tiny per-node config (stale flag, scale factor, offset in bps) that the
+  published price is computed through. A fault is a config change at a known time.
+- **Scenarios:** genuine market move, stale price, unit error, setting change. About
+  three faults a month, one at a time, no overlap.
+- **Labels:** type, nodes, onset, duration, magnitude. Kept apart from the history the
+  tools see; a leakage test checks that no public type exposes them.
+- **Seed:** one seed drives all randomness, so a run repeats exactly.
+
 ## Later ideas
 
 - **Butterflies** (e.g. 2x10Y - 5Y - 30Y) move far less than outright rates, so shape
@@ -187,13 +207,10 @@ The architecture diagram is in the [README](./README.md).
 
 ## Open design questions
 
-- Which nodes and anchor types the MVP curve uses. The user is investigating. The
-  placeholder is 2Y, 5Y and 10Y against a government-style benchmark, one long node
-  against a noisier competitor-style rate, and one node with no benchmark.
+- Real nodes and anchor types for the curve. The MVP uses the hardcoded set in Phase 1
+  design; the user is still investigating the real ones.
 - Whether the history outlier may alarm alone. Decided by the scorecard.
 - The history confidence level and persistence tick count.
 - Local OpenTelemetry viewer: a Grafana stack or the .NET Aspire Dashboard.
-- Whether faults alter published rates directly or a small config object the rate depends
-  on. Leaning to a config object.
 - Design of a `check_mispricing` decision tool (after the MVP).
 - Report format, Excel or something else (after the MVP).
