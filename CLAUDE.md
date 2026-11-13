@@ -29,6 +29,11 @@ Tools, MVP scope and phases are in ROADMAP.md. Tests project is added in Phase 1
 - **Ground-truth labels never reach the agent.** Tools must not leak the scenario label. Scoring answers live in a gitignored `GROUND_TRUTH.md`; don't read or reproduce it.
 - Guardrails: the agent is read-only analysis, and caps loop iterations.
 
+## Test conventions
+- NUnit 4 in `tests/`, one test project per source project. Run `dotnet test` from the repo root.
+- Names: `Method_Condition_Expected`, e.g. `Generate_SameSeed_IdenticalOutput`.
+- Every test that touches randomness passes an explicit seed. Exact assertions for determinism; statistical properties (e.g. realised volatility) use a tolerance band, so tests never flake.
+
 ## Packages (added in the session that needs them)
 - `Anthropic`: official C# SDK, v10+
 - `ModelContextProtocol` (+ `Microsoft.Extensions.Hosting` for the server)
@@ -48,3 +53,4 @@ Status, phases and open design questions live in [ROADMAP.md](ROADMAP.md), the s
 - Session 4 (in progress): README redesigned as a colourful visual overview using GitHub-native features (badges, alerts, Mermaid, SVG charts); previous README kept in a collapsed section. Docs only.
 - Session 5 (in progress): docs consolidated. ROADMAP.md rewritten as lean prose with both narratives, folded-in requirements and the history-based secondary detector (fifth MVP tool, fallback when no benchmark); the separate requirements doc removed. Docs only. Next: Phase 1, simulator design conversation.
 - Session 6 (in progress): README now embeds the rendered visual overview (docs/img/overview.png, source docs/overview.html); duplicated native sections and fault SVGs removed. To regenerate after editing the HTML: render it with headless Edge (`msedge --headless=new --hide-scrollbars --force-device-scale-factor=1.5 --window-size=1000,7500 --virtual-time-budget=10000 --screenshot=out.png file:///path/overview.html`), then crop trailing whitespace. Docs only.
+- Session 7 (in progress): Phase 1 design recorded in ROADMAP.md (#16); tests project added with a smoke test (#17). Next: 1.3, seeded random-walk market.
