@@ -76,20 +76,22 @@ public static class MarketSimulator
     // are medium, very big ones are rare. Plot how often each size happens and you get a
     // bell shape centred on zero. That bell is called the "normal" (or Gaussian) shape.
     //
-    // .NET has no built-in way to roll a bell-shaped number, so we convert a flat roll
-    // into one. The recipe is called Box-Muller. You do not need to remember the maths,
-    // only the contract: flat random numbers IN, one bell-shaped number OUT, centred on
-    // zero, with a typical size of about 1. Multiplying by "how jumpy" then makes it the
-    // size we want.
+    // .NET has no built-in way to roll a bell-shaped number, so we build one from flat
+    // rolls. The trick: roll 12 dice and add them up. One die is flat, but the TOTAL of
+    // many dice clusters in the middle and rarely lands near the extremes: a bell shape.
+    // Subtracting 6 (the average total) centres it on zero, and the typical size comes
+    // out at about 1. Multiplying by "how jumpy" then makes it the size we want.
     //
-    // The two flat rolls are used like a dart throw: u2 picks the direction, u1 picks how
-    // far from the centre, and the formula turns that into a bell-shaped position.
+    // NOTE: this is a deliberate MVP simplification. In reality we would use a proper
+    // normal distribution generator such as Box-Muller (what option-pricing Monte Carlo
+    // uses): it needs a logarithm and a cosine, but has no cap. The dice trick can never
+    // go beyond +/-6, so it never produces the very rarest huge moves. That does not
+    // matter for this simulator, and it is far easier to explain. Swap it in later if needed.
     private static double NextGaussian(Random rng)
     {
-        // "1.0 - ..." keeps u1 away from exactly 0, because the formula takes a logarithm
-        // and the logarithm of 0 breaks.
-        var u1 = 1.0 - rng.NextDouble();
-        var u2 = rng.NextDouble();
-        return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
+        var total = 0.0;
+        for (var i = 0; i < 12; i++)
+            total += rng.NextDouble();
+        return total - 6.0;
     }
 }
