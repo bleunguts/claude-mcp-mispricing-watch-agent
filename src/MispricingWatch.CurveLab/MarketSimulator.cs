@@ -87,7 +87,7 @@ public static class MarketSimulator
     // uses): it needs a logarithm and a cosine, but has no cap. The dice trick can never
     // go beyond +/-6, so it never produces the very rarest huge moves. That does not
     // matter for this simulator, and it is far easier to explain. Swap it in later if needed.
-    private static double NextGaussian(Random rng)
+    internal static double NextGaussian(Random rng)
     {
         var total = 0.0;
         for (var i = 0; i < 12; i++)
