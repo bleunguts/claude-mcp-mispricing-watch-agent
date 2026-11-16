@@ -1,5 +1,4 @@
 namespace MispricingWatch.CurveLab.Tests;
-
 public class PricingSimulatorTests
 {
     private const int Seed = 42;
@@ -16,10 +15,7 @@ public class PricingSimulatorTests
         return PricingSimulator.Generate(NodeSpec.Mvp, truth, seed);
     }
 
-    private static NodePrices Node(NodePrices[] all, string tenor) => all.Single(p => p.Tenor == tenor);
-
-    private static double[] SpreadBps(NodePrices p) =>
-        p.Published.Zip(p.Benchmark!, (pub, bench) => (pub - bench) * 100.0).ToArray();
+    private static NodePrices Node(NodePrices[] all, string tenor) => all.Single(p => p.Tenor == tenor);    
 
     private static double StdDev(double[] x)
     {
@@ -59,7 +55,7 @@ public class PricingSimulatorTests
     [Test]
     public void Generate_GovernmentSpread_CentredOnZeroWithConfiguredSize()
     {
-        var spread = SpreadBps(Node(Build(), "5Y"));
+        var spread = Utility.SpreadBps(Node(Build(), "5Y"));
 
         Assert.That(spread.Average(), Is.EqualTo(0.0).Within(0.02));
         Assert.That(StdDev(spread), Is.EqualTo(GovernmentSpreadBps).Within(10).Percent);
@@ -68,7 +64,7 @@ public class PricingSimulatorTests
     [Test]
     public void Generate_CompetitorSpread_CentredOnZeroWithConfiguredSize()
     {
-        var spread = SpreadBps(Node(Build(), "30Y"));
+        var spread = Utility.SpreadBps(Node(Build(), "30Y"));
 
         Assert.That(spread.Average(), Is.EqualTo(0.0).Within(0.1));
         Assert.That(StdDev(spread), Is.EqualTo(CompetitorSpreadBps).Within(10).Percent);
@@ -79,13 +75,13 @@ public class PricingSimulatorTests
     {
         var all = Build();
 
-        Assert.That(StdDev(SpreadBps(Node(all, "5Y"))), Is.LessThan(StdDev(SpreadBps(Node(all, "30Y")))));
+        Assert.That(StdDev(Utility.SpreadBps(Node(all, "5Y"))), Is.LessThan(StdDev(Utility.SpreadBps(Node(all, "30Y")))));
     }
 
     [Test]
     public void Generate_GovernmentSpread_StationaryFirstHalfVsSecondHalf()
     {
-        var spread = SpreadBps(Node(Build(), "10Y"));
+        var spread = Utility.SpreadBps(Node(Build(), "10Y"));
         var half = spread.Length / 2;
 
         var first = StdDev(spread[..half]);
@@ -103,7 +99,7 @@ public class PricingSimulatorTests
         var i = NodeSpec.Mvp.ToList().FindIndex(s => s.Tenor == "5Y");
 
         var truthRangeBps = (truth[i].Max() - truth[i].Min()) * 100.0;
-        var spread = SpreadBps(prices[i]);
+        var spread = Utility.SpreadBps(prices[i]);
         var spreadRangeBps = spread.Max() - spread.Min();
 
         Assert.That(spreadRangeBps, Is.LessThan(truthRangeBps / 5));
