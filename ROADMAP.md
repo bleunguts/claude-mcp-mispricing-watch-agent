@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. The scorecard compares the spread detector with a fixed-threshold baseline against the hidden labels (#36). Alarms are emitted as OpenTelemetry log records and each investigation as a trace, both shown in the Aspire dashboard (#34, #66). The manual Claude Desktop run is done (#61): it saw the frozen stale price every time but followed prompt `v1` and missed it. Next: 4.2, prompt `v2` that uses `check_stale` (#72). Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
+**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. The scorecard compares the spread detector with a fixed-threshold baseline against the hidden labels (#36). Alarms are emitted as OpenTelemetry log records and each investigation as a trace, both shown in the Aspire dashboard (#34, #66). The manual Claude Desktop run is done (#61): it saw the frozen stale price every time but followed prompt `v1` and missed it. Prompt `v2` with `check_stale` fixed it: Desktop caught the stale node 6 of 6 (#72). Next: the deferred items and Phase 5. Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
 
 ## Purpose
 
@@ -272,6 +272,31 @@ it would miss by construction.
   not repeatable like a script. Two 30Y stale runs (3 and 4) had identical text, possibly a paste duplicate. Tool order
   was recorded for run 1 only.
 
+### Prompt v2 (4.2)
+
+Prompt `v2` adds `check_stale` as step 4 and says either an off-benchmark spread or a frozen price is an alarm. The
+guardrails require the fourth step and expect ALARM when the spread is outside tolerance or the price is stale. Everything
+else in the prompt is unchanged. Same server, seed 42, `MISPRICING_FAULT=StalePrice`, Claude Desktop, scored by hand.
+
+| Node | Prompt | Runs | OK | ALARM | Against truth |
+|---|---|---|---|---|---|
+| 30Y, frozen | v1 | 6 | 6 | 0 | 0 hits, 6 misses |
+| 30Y, frozen | v2 | 6 | 0 | 6 | 6 hits |
+| 10Y, clean | v1 | 5 | 5 | 0 | 5 hits |
+| 10Y, clean | v2 | 4 | 4 | 0 | 4 hits, 0 false alarms |
+
+- **The wording was the whole difference.** On `v1` Desktop saw the frozen price and named `check_stale` but answered OK
+  because the rule said to decide from the spread. On `v2` all 6 runs called `check_stale` (999 unchanged ticks while the
+  benchmark moved about 9.3 bps) and answered ALARM, each saying the spread score of -2.687 with 0 ticks outside was not
+  the trigger. The clean node stayed OK with `stale` false.
+- **This tests following a rule, not finding one.** `v2` tells the model that a frozen price is an alarm. It shows the
+  tools and rule work together, not that the model would reach the rule unprompted.
+- **Some explanations are loose.** Run 1 says the spread is small "because the price froze recently" (999 ticks is about
+  four days), and run 4 says the benchmark drifted "about 3 bps", against the 9.3 reported. Verdicts were right.
+- **Limits:** one seed and one stale node. The clean 10Y case has 4 runs, below the planned 5. A quiet market with a
+  flat price and a flat benchmark, where `check_stale` should stay false, was not tested. 30Y runs 2 and 3 are
+  near-identical text, possibly a paste duplicate. Qwen was not rerun.
+
 ## What the scorecard showed (3.2)
 
 One NUnit test, `SecretGroundTruthScoreTests` in the McpServer test project, is the only code that reads the hidden
@@ -356,7 +381,7 @@ of sessions, one or two per phase. Everything else is deferred.
 | 3 | 3.4 Emit alarms as OpenTelemetry log records, viewed in the Aspire dashboard | #34 | done |
 | 3 | 3.5 Trace each investigation: a span per model call and tool call, alarm linked to its trace | #66 | done |
 | 4 | 4.1 Manual run in Claude Desktop, scored and compared with Qwen | #61 | done |
-| 4 | 4.2 Prompt `v2` that uses `check_stale`, rerun in Claude Desktop | #72 | todo |
+| 4 | 4.2 Prompt `v2` that uses `check_stale`, rerun in Claude Desktop | #72 | done |
 
 Phase 1.1 to 1.5 (#16 to #20) are done.
 
