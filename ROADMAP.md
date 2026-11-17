@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). Next: 2.2, `compute_spread_stats` (#28).
+**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). Next: 3.1, the agent loop (#31).
 
 ## Purpose
 
@@ -220,7 +220,7 @@ of sessions, one or two per phase. Everything else is deferred.
 | 1 | 1.6 Fault injector: setting change only (stale price and unit error deferred, #47) | #21 | done |
 | 1 | 1.7 World builder: one call builds prices plus hidden ground truth, one fault per world, leakage test | #24 | done |
 | 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` (48 bucket averages per call) | #25 | done |
-| 2 | 2.2 `compute_spread_stats` (main detector) | #28 | todo |
+| 2 | 2.2 `compute_spread_stats` (main detector) | #28 | done |
 | 3 | 3.0 Port the model layer from the flaky agent (copy, no loop) | #51 | todo |
 | 3 | 3.1 Agent loop on `IModel` (scripted, then Ollama), MCP client, prompt, JSON alarm record | #31 | todo |
 | 3 | 3.2 Fixed-threshold baseline and scorecard | #36 | todo |
