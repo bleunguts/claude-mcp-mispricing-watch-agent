@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). Next: 3.1b, prompt and live Qwen run (#56). Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
+**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. Next: Phase 3 scorecard (#36). Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
 
 ## Purpose
 
@@ -210,6 +210,31 @@ What it learned becomes design rules here:
 The model layer (messages, `IModel`, scripted and Ollama models) is copied from that repo
 (#51); the loop itself is written here in 3.1.
 
+## What Qwen showed (3.1b)
+
+Prompt `v1`, seed 42, local Ollama on a CPU-only laptop, five runs per row. "Right" means the first verdict agrees
+with `compute_spread_stats` (10Y inside tolerance, so OK; 30Y outside, so ALARM). It is not scored against the
+hidden labels (#36).
+
+| Model | Node | First verdict right | Nudges per run | Time per run |
+|---|---|---|---|---|
+| qwen2.5:3b | 10Y | 2 of 5 | 1 to 2 | 45 to 90 s |
+| qwen2.5:3b | 30Y | 5 of 5 | 1 | 38 to 70 s |
+| qwen2.5:7b | 10Y | 5 of 5 | 0 | 42 to 80 s |
+| qwen2.5:7b | 30Y | 5 of 5 | 0 | 43 to 45 s |
+
+- **Guardrails work.** The loop requires all three tools, a `Verdict:` line and agreement with
+  `compute_spread_stats`, nudges up to three times, then flags `INCOMPLETE`. All 25 runs ended with a record that
+  agrees with the detector; none ended `INCOMPLETE`.
+- **3b needs the loop, 7b mostly does not.** 3b asked for all tools at once in every run and never retried a
+  skipped call unprompted. 7b called them one at a time in the right order in all 10 runs.
+- **3b misreads figures.** It called a score of -0.768 "large" and answered ALARM with 0 ticks outside. Its 5 of 5
+  on 30Y may be a lean towards ALARM rather than judgement.
+- **The check covers the verdict, not the rationale.** After the nudge 3b flips to OK but its rationale still says
+  the price is off its benchmark.
+- **Limits:** one clean and one faulted node, not scored against ground truth. One 3b run took 92 minutes because
+  the laptop slept mid-run; ignore that time.
+
 ## MVP session plan
 
 A working end-to-end prototype matters more than extra features, so the MVP is a handful
@@ -223,7 +248,7 @@ of sessions, one or two per phase. Everything else is deferred.
 | 2 | 2.2 `compute_spread_stats` (main detector) | #28 | done |
 | 3 | 3.0 Port the model layer from the flaky agent (copy, no loop) | #51 | done |
 | 3 | 3.1 Agent loop and MCP client, proven on a scripted model | #31 | done |
-| 3 | 3.1b Investigation prompt, JSON alarm record, live run on local Qwen | #56 | todo |
+| 3 | 3.1b Investigation prompt, JSON alarm record, live run on local Qwen | #56 | done |
 | 3 | 3.2 Fixed-threshold baseline and scorecard | #36 | todo |
 | 4 | 4.1 Manual run in Claude Desktop, scored and compared with Qwen | new | todo |
 
