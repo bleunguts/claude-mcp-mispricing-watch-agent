@@ -4,11 +4,11 @@
 
 ### Is this published price real, or is our pricing system wrong?
 
-![Phase](https://img.shields.io/badge/next-phase%201%20simulator-ee4fa0?style=for-the-badge)
+![Next](https://img.shields.io/badge/next-Claude%20Desktop%20run-ee4fa0?style=for-the-badge)
 ![MVP](https://img.shields.io/badge/MVP-v3%20scoped-1fbf75?style=for-the-badge)
 ![.NET](https://img.shields.io/badge/.NET-10-8b5cf6?style=for-the-badge)
 ![MCP](https://img.shields.io/badge/MCP-tool%20producer-3b82f6?style=for-the-badge)
-![Code](https://img.shields.io/badge/simulator%20code-none%20yet%2C%20by%20design-ffb020?style=for-the-badge)
+![Alarms](https://img.shields.io/badge/alarms-OpenTelemetry-ffb020?style=for-the-badge)
 
 </div>
 
@@ -29,4 +29,32 @@ A C# agent built as an MCP server (tool producer) plus a hand-written agent loop
 | [`ROADMAP.md`](./ROADMAP.md) | Purpose, intended narrative, requirements, how the agent decides, MVP scope, phases, open questions. |
 | [`CLAUDE.md`](./CLAUDE.md) | Working rules and session log. |
 
-Source layout: `src/MispricingWatch.CurveLab` (simulator library), `src/MispricingWatch.McpServer` (tool producer), `src/MispricingWatch.Agent` (tool orchestrator). All currently empty stubs with TODO comments.
+Source layout: `src/MispricingWatch.CurveLab` (simulator library), `src/MispricingWatch.McpServer` (tool producer), `src/MispricingWatch.Agent` (tool orchestrator: hand-written loop, local Qwen, alarm telemetry). Tests are in `tests/`; the scorecard that reads the hidden answer key is `SecretGroundTruthScoreTests`.
+
+## 🔔 See an alarm in the dashboard
+
+When the agent decides a price is wrong, it emits the alarm as an OpenTelemetry log record. Any OTLP viewer can show it; the [Aspire dashboard](https://aspire.dev/dashboard/standalone/) is the easiest, needs no Docker, and runs locally.
+
+<p align="center">
+  <img src="docs/img/aspire-alarm.png" alt="Aspire dashboard, structured logs: a Warning from MispricingWatch.Agent, 'Mispricing Alarm on 30Y', with the attributes mispricing.node, mispricing.detector, mispricing.rationale and mispricing.prompt_version." width="800">
+</p>
+
+One-off setup (installs the Aspire CLI as a global .NET tool):
+
+```bash
+dotnet tool install -g Aspire.Cli
+```
+
+Then, in one terminal, start the dashboard. It prints a login link and listens for telemetry on `localhost:4317`:
+
+```bash
+aspire dashboard run
+```
+
+In a second terminal, run the agent on the 30Y node, which has a real gap to its benchmark (needs [Ollama](https://ollama.com) with `qwen2.5:7b` pulled, and the solution built):
+
+```bash
+dotnet run --project src/MispricingWatch.Agent -- live qwen2.5:7b 30Y
+```
+
+Open the dashboard link and choose **Structured logs**. Only alarms are emitted, so a clean node such as 10Y shows nothing. Each record carries `mispricing.node`, `mispricing.detector`, `mispricing.rationale` and `mispricing.prompt_version`. The agent also prints the record to its own console. To send telemetry to another viewer, set `OTEL_EXPORTER_OTLP_ENDPOINT`.

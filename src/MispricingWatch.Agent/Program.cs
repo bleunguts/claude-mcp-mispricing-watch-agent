@@ -2,6 +2,7 @@
 // the hand-written loop (AgentLoop) on a scripted model. No LLM is involved yet (live Qwen run is #56).
 using MispricingWatch.Agent;
 using ModelContextProtocol.Client;
+using OpenTelemetry.Logs;
 
 var root = AppContext.BaseDirectory;
 while (!File.Exists(Path.Combine(root, "MispricingWatch.slnx")))
@@ -33,6 +34,7 @@ if (args.Length > 0 && (args[0] == "live" || args[0] == "batch"))
     var tenor = args.Length > 2 ? args[2] : "10Y";
     var runs = args[0] == "batch" && args.Length > 3 ? int.Parse(args[3]) : 1;
     using var http = new HttpClient { BaseAddress = new Uri("http://localhost:11434"), Timeout = TimeSpan.FromMinutes(10) };
+    using var telemetry = new AlarmTelemetry(o => { o.AddConsoleExporter(); o.AddOtlpExporter(); });
 
     // What the detector itself says about this node, read the same way the agent can. Used to mark answers right or wrong.
     var statsReply = await client.CallToolAsync("compute_spread_stats", new Dictionary<string, object?> { ["tenor"] = tenor });
@@ -59,6 +61,10 @@ if (args.Length > 0 && (args[0] == "live" || args[0] == "batch"))
                 Console.WriteLine($"INCOMPLETE: {live.Problem}");
             }
             rows.Add(SummaryRow(run, live, expected, clock.Elapsed));
+            // emit telemetry
+            var alarmRecord = AlarmRecord.Parse(live.FinalText, tenor);
+            //Console.WriteLine($"Telemetry emit: {alarmRecord?.ToJson() ?? "no usable record"}");
+            if (alarmRecord != null) telemetry.Emit(alarmRecord);
         }
         catch (Exception ex) when (ex is OperationCanceledException or InvalidOperationException)
         {
