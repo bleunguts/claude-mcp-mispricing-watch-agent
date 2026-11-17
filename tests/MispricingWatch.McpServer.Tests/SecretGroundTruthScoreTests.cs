@@ -61,34 +61,48 @@ public class SecretGroundTruthScoreTests
     private static bool FixedThresholdAlarms(NodePrices node) =>
         Math.Abs((node.Published[^1] - node.Benchmark![^1]) * 100.0) > FixedThresholdBps;
 
-    private static (Counts Spread, Counts Fixed) PrintTable(FaultType faultType)
+    private static readonly StaleParams Stale = new();
+
+    private static bool StaleAlarms(NodePrices node) => StaleCheck.Compute(node, Stale).Stale;
+
+    // Two detectors together: alarm if either one alarms.
+    private static bool SpreadOrStaleAlarms(NodePrices node) => SpreadAlarms(node) || StaleAlarms(node);
+
+    private static Counts PrintTable(FaultType faultType)
     {
         var spread = ScoreAgainstSecretGroundTruth(SpreadAlarms, faultType);
         var fixedThreshold = ScoreAgainstSecretGroundTruth(FixedThresholdAlarms, faultType);
+        var stale = ScoreAgainstSecretGroundTruth(StaleAlarms, faultType);
+        var spreadOrStale = ScoreAgainstSecretGroundTruth(SpreadOrStaleAlarms, faultType);
 
         Console.WriteLine($"*** SECRET GROUND TRUTH SCORECARD, fault type {faultType} (answer key peeked at on purpose) ***");
         Console.WriteLine($"{Seeds} seeds, each as a faulted and a clean world; 4 benchmarked nodes checked per world.");
         Console.WriteLine($"{"detector",-30} {"hits",5} {"false",6} {"missed",7} {"precision",10} {"miss rate",10}");
         Console.WriteLine(Row("spread (per-node tolerance)", spread));
         Console.WriteLine(Row($"fixed threshold ({FixedThresholdBps} bps)", fixedThreshold));
-        return (spread, fixedThreshold);
-    }
-
-    [Test]
-    public void SecretGroundTruthScore_SettingChange_SpreadMeetsTargets()
-    {
-        var (spread, _) = PrintTable(FaultType.SettingChange);
+        Console.WriteLine(Row("stale check (frozen price)", stale));
+        Console.WriteLine(Row("spread or stale", spreadOrStale));
         Console.WriteLine($"Targets: precision at least {TargetMinPrecision:P0}, miss rate at most {TargetMaxMissRate:P0}.");
-
-        // Only the spread detector is held to the targets; the baseline is there to compare against.
-        Assert.That(spread.Precision, Is.GreaterThanOrEqualTo(TargetMinPrecision));
-        Assert.That(spread.MissRate, Is.LessThanOrEqualTo(TargetMaxMissRate));
+        return spreadOrStale;
     }
 
-    // The harder fault is reported, not asserted: the point is to see whether the detectors still cope.
+    // The detector we ship is "spread or stale". It is held to the targets on both fault types;
+    // the other rows are there to compare against.
     [Test]
-    public void SecretGroundTruthScore_StalePrice_PrintsTable()
+    public void SecretGroundTruthScore_SettingChange_SpreadOrStaleMeetsTargets()
     {
-        PrintTable(FaultType.StalePrice);
+        var spreadOrStale = PrintTable(FaultType.SettingChange);
+
+        Assert.That(spreadOrStale.Precision, Is.GreaterThanOrEqualTo(TargetMinPrecision));
+        Assert.That(spreadOrStale.MissRate, Is.LessThanOrEqualTo(TargetMaxMissRate));
+    }
+
+    [Test]
+    public void SecretGroundTruthScore_StalePrice_SpreadOrStaleMeetsTargets()
+    {
+        var spreadOrStale = PrintTable(FaultType.StalePrice);
+
+        Assert.That(spreadOrStale.Precision, Is.GreaterThanOrEqualTo(TargetMinPrecision));
+        Assert.That(spreadOrStale.MissRate, Is.LessThanOrEqualTo(TargetMaxMissRate));
     }
 }
