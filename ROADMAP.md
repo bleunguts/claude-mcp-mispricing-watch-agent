@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Phase 1 (simulator) is done. The backlog is cut to a six-session MVP (see "MVP session plan"). Next: 2.1, MCP server scaffold, get_history, get_benchmark (#25).
+**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). Next: port the model layer (#51), then 2.1, MCP server scaffold, get_history, get_benchmark (#25).
 
 ## Purpose
 
@@ -156,22 +156,64 @@ A fake world, planted faults, and one question per node: alarm or no alarm.
 |---|---|---|---|
 | 0 | Requirements and MVP scope. Done. | No | n/a |
 | 1 | Simulator: fake curve, benchmark series, planted faults, hidden labels, seeded. Tests project added. | No | 3-4 days |
-| 2 | MCP server and the five tools, tried in MCP Inspector. | No | ~1 week |
-| 3 | Agent loop (Anthropic C# SDK + MCP client), investigation prompt, fixed-threshold baseline, scoring, OpenTelemetry alarm. | Yes | ~1 week, plus 3-4 days scoring |
-| 4 | Calibration: per-node tolerance from history, robust statistics, false-alarm budget. | No | new |
-| 5 | Futures and swaps curve: one unit, and the seam between them. | No | new |
-| 6 | Shape and onset: butterflies, change points, release log, wire price, cause labels. | Light | was `check_mispricing` |
-| 7 | Polish: confidence scores, optional web benchmark, report. | Light | 2-3 days |
+| 2 | MCP server and the MVP tools, tried in MCP Inspector. | No | ~1 week |
+| 3 | Agent loop (MCP client + hand-written loop behind `IModel`: scripted model for tests, local Ollama/Qwen for live runs), investigation prompt, fixed-threshold baseline, scoring. OpenTelemetry alarm is deferred. | No | ~1 week, plus 3-4 days scoring |
+| 4 | **MVP finale:** a manual run in Claude Desktop against the same MCP server, scored against the same ground truth and compared with the Qwen runs. | No (Pro login) | 1 session |
+| 5 | Calibration: per-node tolerance from history, robust statistics, false-alarm budget. | No | new |
+| 6 | Futures and swaps curve: one unit, and the seam between them. | No | new |
+| 7 | Shape and onset: butterflies, change points, release log, wire price, cause labels. | Light | was `check_mispricing` |
+| 8 | Polish: confidence scores, optional web benchmark, report. | Light | 2-3 days |
 
-Phase 3 onward calls the Claude API and needs a Console API key in `ANTHROPIC_API_KEY`,
-never committed. Every phase is split into small tutorial-style sessions: concept first,
-then the code written together. Each session follows issue, branch, implementation,
-pull request.
+No phase needs API credits. The loop runs on a free local model through Ollama
+(`qwen2.5:3b`, then `7b` if it helps) and on scripted models, and Claude is used only by
+hand in Claude Desktop on the Pro plan. A paid Claude API adapter is not built; the
+`IModel` seam would let it be added later. Every phase is split into small tutorial-style
+sessions: concept first, then the code written together. Each session follows issue,
+branch, implementation, pull request.
+
+The phase numbers were shifted by one from Phase 4 on (Nov 2026) to make room for the
+Claude Desktop finale. Issues for those later phases do not exist yet.
+
+## Lessons from the flaky agent
+
+The sibling repo
+[claude-mcp-flaky-test-agent](https://github.com/bleunguts/claude-mcp-flaky-test-agent)
+built the same pattern and ran it on `qwen2.5:3b` and `7b` on this CPU-only 16 GB laptop.
+What it learned becomes design rules here:
+
+1. **Tool output must fit a small context.** Ollama runs at `num_ctx` 8192. `get_history`
+   returns a bounded window with summary stats and a `Truncated` flag, never 12,600 raw
+   ticks.
+2. **Simple arguments.** Small models mangle numbers they copy. Tools take a tenor and a
+   named window, not free-form ranges.
+3. **A refusal is a normal result with an `Error` field**, not an exception. The loop also
+   survives SDK-level failures (`IsError`).
+4. **The server owns the boundary.** Seed and scenario come from server config, never the
+   caller.
+5. **Code does what code can.** Small models read figures well and turn them into a
+   verdict badly. Tools return computed fields (gap in bps, tolerance, whether it is
+   exceeded, ticks persisted). The loop checks the model's verdict against them and may
+   state the measured figures itself.
+6. **Guardrails live in the loop, not the prompt:** one tool per turn, required steps
+   before an answer, a `Verdict:` line, a nudge limit, the iteration cap, an `INCOMPLETE`
+   flag.
+7. **Scripted model first**, including misbehaving scripts (runaway, unknown tool, bad
+   argument), so the loop is proven with no LLM.
+8. **Score with enough runs.** Three runs per case ranked nothing in the flaky repo. Use
+   at least five per node and case, with a written rubric.
+9. **Expect Qwen to prove the process, not the reasoning.** Phase 4 (Claude Desktop) is
+   the reasoning check. A weak Qwen result is an acceptable outcome, and says the model is
+   the limit, not the tools.
+10. **Launch the built server dll**, not `dotnet run`: build output on stdout corrupts
+    the protocol.
+
+The model layer (messages, `IModel`, scripted and Ollama models) is copied from that repo
+(#51); the loop itself is written here in 3.1.
 
 ## MVP session plan
 
-A working end-to-end prototype matters more than extra features, so the MVP is six
-sessions, one or two per phase. Everything else is deferred.
+A working end-to-end prototype matters more than extra features, so the MVP is a handful
+of sessions, one or two per phase. Everything else is deferred.
 
 | Phase | Session | Issue | Status |
 |---|---|---|---|
@@ -179,8 +221,10 @@ sessions, one or two per phase. Everything else is deferred.
 | 1 | 1.7 World builder: one call builds prices plus hidden ground truth, one fault per world, leakage test | #24 | done |
 | 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` | #25 | todo |
 | 2 | 2.2 `compute_spread_stats` (main detector) | #28 | todo |
-| 3 | 3.1 Agent loop, MCP client, prompt, JSON alarm record | #31 | todo |
+| 3 | 3.0 Port the model layer from the flaky agent (copy, no loop) | #51 | todo |
+| 3 | 3.1 Agent loop on `IModel` (scripted, then Ollama), MCP client, prompt, JSON alarm record | #31 | todo |
 | 3 | 3.2 Fixed-threshold baseline and scorecard | #36 | todo |
+| 4 | 4.1 Manual run in Claude Desktop, scored and compared with Qwen | new | todo |
 
 Phase 1.1 to 1.5 (#16 to #20) are done.
 
@@ -189,7 +233,7 @@ Phase 1.1 to 1.5 (#16 to #20) are done.
 Until #29 lands, faults are planted on benchmarked nodes only, and the no-benchmark
 node reports "unavailable" with no alarm. The alarm is a JSON record on the console
 until #34. The leakage test lives in 1.7, and the agent is read-only because the tools
-only read. Phases 4 to 7 above are unchanged.
+only read. Phases 5 to 8 above are the old Phases 4 to 7, unchanged.
 
 The architecture diagram is in the [README](./README.md).
 

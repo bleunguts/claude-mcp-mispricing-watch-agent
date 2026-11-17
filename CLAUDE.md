@@ -14,14 +14,15 @@ The aim is to understand agentic architecture from the inside. Favour clear, exp
 
 ## Architecture
 ```
-src/MispricingWatch.Agent      -> tool ORCHESTRATOR: Anthropic C# SDK (Messages API) + MCP client, hand-written loop
+src/MispricingWatch.Agent      -> tool ORCHESTRATOR: MCP client + hand-written loop behind IModel (scripted model, local Ollama/Qwen)
 src/MispricingWatch.McpServer  -> tool PRODUCER: ModelContextProtocol C# SDK, stdio transport, [McpServerTool] handlers
 src/MispricingWatch.CurveLab   -> library: synthetic yield-curve simulator with hidden ground-truth labels
 ```
 Tools, MVP scope and phases are in ROADMAP.md. Tests project is added in Phase 1.
 
 ## Hard rules
-- **Hand-code the loop.** Use `client.Messages.Create` and handle `tool_use` -> MCP `CallToolAsync` -> `tool_result` -> repeat until `end_turn`. No `IChatClient` + `UseFunctionInvocation()`.
+- **Hand-code the loop.** Handle `tool_use` -> MCP `CallToolAsync` -> `tool_result` -> repeat until the model stops asking for tools. The loop talks only to `IModel` (scripted model for tests, Ollama for live runs; message types mirror the Anthropic Messages API). No `IChatClient` + `UseFunctionInvocation()`.
+- **Copied code:** the model layer (messages, `IModel`, scripted and Ollama models) is copied from `claude-mcp-flaky-test-agent` (#51), the one exception to "no code ahead of its session". Each copied file names its source commit. No shared project, DLL or package; the loop is written here.
 - The MCP server contains **no LLM calls**. Deterministic C# only.
 - stdio transport: **log to stderr only**. stdout is the protocol channel.
 - **Keep docs lean.** ROADMAP.md and README.md read as short, plain prose. The original proposal lives in git history (first commit) and in my local copy, not in the repo. Don't re-add clutter or parallel versions of the same content.
@@ -35,12 +36,12 @@ Tools, MVP scope and phases are in ROADMAP.md. Tests project is added in Phase 1
 - Every test that touches randomness passes an explicit seed. Exact assertions for determinism; statistical properties (e.g. realised volatility) use a tolerance band, so tests never flake.
 
 ## Packages (added in the session that needs them)
-- `Anthropic`: official C# SDK, v10+
+- No `Anthropic` package: there is no API budget. An Anthropic adapter could be added behind `IModel` later.
 - `ModelContextProtocol` (+ `Microsoft.Extensions.Hosting` for the server)
-- Excel report library (ClosedXML or EPPlus) in Phase 5
+- Excel report library (ClosedXML or EPPlus) in the polish phase (8)
 
 ## API access
-Claude Code runs on my Pro login. The Agent (Phase 4+) calls the Claude API directly and needs a Console API key with credits in the `ANTHROPIC_API_KEY` env var, never in the repo.
+No paid API. Claude Code and the Phase 4 Claude Desktop run use my Pro login. The Agent's live runs use a local Ollama model (`qwen2.5:3b`, `7b` if needed; CPU-only 16 GB laptop, so nothing larger). Nothing secret is needed; never commit a key if one is ever added.
 
 ## Plan
 Status, phases and open design questions live in [ROADMAP.md](ROADMAP.md), the single source of truth.
@@ -59,3 +60,4 @@ Status, phases and open design questions live in [ROADMAP.md](ROADMAP.md), the s
 - Session 10 (in progress): backlog re-scoped to a six-session MVP (#45): merged issues, `mvp` and `deferred` labels, ROADMAP "MVP session plan". Docs only. Next: 1.6, fault injector (#21).
 - Session 11 (in progress): Phase 1.6 fault injector, setting change only (FaultInjector.ApplySettingChange, FaultLabel) with 3 tests; stale price and unit error deferred (#47). Next: 1.7, scheduler and hidden labels (#24).
 - Session 12 (in progress): Phase 1.7 WorldBuilder.Build(seed): market move plus one setting-change fault on a benchmarked node, returns prices and a separate GroundTruth, 5 tests incl. a leakage check. Phase 1 complete. Next: 2.1, MCP server scaffold, get_history, get_benchmark (#25).
+- Session 13 (in progress): plan revised after studying the flaky-test agent (#50): the loop runs behind `IModel` on a scripted model and local Ollama/Qwen (no API credits), Phase 4 is a manual Claude Desktop run as the MVP finale, old Phases 4 to 7 renumbered 5 to 8, "Lessons from the flaky agent" added to ROADMAP.md. Docs only. Next: port the model layer (#51), then 2.1 (#25).
