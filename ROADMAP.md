@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). Next: port the model layer (#51), then 2.1, MCP server scaffold, get_history, get_benchmark (#25).
+**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). Next: 2.2, `compute_spread_stats` (#28).
 
 ## Purpose
 
@@ -182,8 +182,8 @@ built the same pattern and ran it on `qwen2.5:3b` and `7b` on this CPU-only 16 G
 What it learned becomes design rules here:
 
 1. **Tool output must fit a small context.** Ollama runs at `num_ctx` 8192. `get_history`
-   returns a bounded window with summary stats and a `Truncated` flag, never 12,600 raw
-   ticks.
+   returns a bounded window with summary stats and a `Truncated` flag, never raw
+   ticks. `get_history` returns 48 bucket averages whatever the window.
 2. **Simple arguments.** Small models mangle numbers they copy. Tools take a tenor and a
    named window, not free-form ranges.
 3. **A refusal is a normal result with an `Error` field**, not an exception. The loop also
@@ -219,7 +219,7 @@ of sessions, one or two per phase. Everything else is deferred.
 |---|---|---|---|
 | 1 | 1.6 Fault injector: setting change only (stale price and unit error deferred, #47) | #21 | done |
 | 1 | 1.7 World builder: one call builds prices plus hidden ground truth, one fault per world, leakage test | #24 | done |
-| 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` | #25 | todo |
+| 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` (48 bucket averages per call) | #25 | done |
 | 2 | 2.2 `compute_spread_stats` (main detector) | #28 | todo |
 | 3 | 3.0 Port the model layer from the flaky agent (copy, no loop) | #51 | todo |
 | 3 | 3.1 Agent loop on `IModel` (scripted, then Ollama), MCP client, prompt, JSON alarm record | #31 | todo |
@@ -243,7 +243,7 @@ Rule for the MVP: the simplest thing that works. Where unsure, hardcode and revi
 
 - **Nodes:** 2Y, 5Y, 10Y (government-style benchmark), 30Y (competitor-style), 3W (no
   benchmark). Hardcoded list.
-- **Time:** 1-minute ticks, 10-hour day, 21 days, about 12,600 ticks per node. Hardcoded.
+- **Time:** 1-minute ticks, 4-hour day (240 ticks), 14 days, 3,360 ticks per node. Hardcoded. Shrunk from 10 hours and 21 days in 2.1; longer history returns when the agent uses history to judge a price.
 - **Three series per node:** a hidden true rate (one common factor plus node noise),
   the published price (truth plus small noise), and the benchmark (truth plus its own
   noise; competitor-style adds a few ticks of delay; none for 3W). Market moves change
