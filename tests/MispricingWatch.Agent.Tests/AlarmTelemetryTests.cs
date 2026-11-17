@@ -36,6 +36,17 @@ public class AlarmTelemetryTests
         }
 
         Assert.That(exported, Is.Empty);
-        Assert.That(exported.First().FormattedMessage, Does.Contain("10Y"));
+    }
+
+    [Test]
+    public void Emit_AlarmRecord_MessageNamesTheNode()
+    {
+        var exported = new List<LogRecord>();
+        using (var telemetry = new AlarmTelemetry(o => o.AddInMemoryExporter(exported)))
+        {
+            telemetry.Emit(new AlarmRecord("30Y", true, "spread-to-benchmark", "score 5.955", "v1"));
+        }
+
+        Assert.That(exported[0].FormattedMessage, Does.Contain("30Y"));
     }
 }
