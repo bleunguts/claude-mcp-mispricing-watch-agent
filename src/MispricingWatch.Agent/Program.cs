@@ -39,7 +39,7 @@ if (args.Length > 0 && (args[0] == "live" || args[0] == "batch"))
     using var http = new HttpClient { BaseAddress = new Uri("http://localhost:11434"), Timeout = TimeSpan.FromMinutes(10) };
     using var telemetry = new AlarmTelemetry(o => { o.AddConsoleExporter(); o.AddOtlpExporter(); });
     using var tracer = Sdk.CreateTracerProviderBuilder().SetResourceBuilder(ResourceBuilder.
-                            CreateDefault().AddService("Mispricing.Agent"))
+                            CreateDefault().AddService("MispricingWatch.Agent"))
                             .AddSource(AgentTelemetry.SourceName)
                             .AddConsoleExporter()
                             .AddOtlpExporter()
