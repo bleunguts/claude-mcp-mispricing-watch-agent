@@ -56,3 +56,4 @@ Status, phases and open design questions live in [ROADMAP.md](ROADMAP.md), the s
 - Session 7 (in progress): Phase 1 design recorded in ROADMAP.md (#16); tests project added with a smoke test (#17). Next: 1.3, seeded random-walk market.
 - Session 8 (in progress): Phase 1.3 seeded correlated random walk (MarketSimulator, NodeSpec) with 6 tests. Next: 1.4, benchmark series.
 - Session 9 (in progress): Phase 1.4 published price and benchmark series (PricingSimulator, BenchmarkKind: government, competitor with 3-tick lag, none as null) with 8 tests. Next: 1.5, genuine market move.
+- Session 10 (in progress): backlog re-scoped to a six-session MVP (#45): merged issues, `mvp` and `deferred` labels, ROADMAP "MVP session plan". Docs only. Next: 1.6, fault injector (#21).
