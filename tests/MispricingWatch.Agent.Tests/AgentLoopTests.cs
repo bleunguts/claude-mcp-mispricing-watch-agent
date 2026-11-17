@@ -1,4 +1,7 @@
 using ModelContextProtocol.Client;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
+using System.Diagnostics;
 
 namespace MispricingWatch.Agent.Tests;
 
@@ -129,5 +132,24 @@ public class AgentLoopTests
         Assert.That(result.StopReason, Is.EqualTo(LoopStopReason.Completed));
         var toolResult = (ToolResultBlock)result.Messages[2].Content.Single();
         Assert.That(toolResult.IsError, Is.True);
+    }
+
+    [Test]
+    public async Task RunAsync_ToolThenAnswer_EmitsSpanPerModelCallAndToolCall()
+    {
+        var spans = new List<Activity>();
+        using var tracer = Sdk.CreateTracerProviderBuilder()
+            .AddSource(AgentTelemetry.SourceName)
+            .AddInMemoryExporter(spans)
+            .Build();
+        var model = new ScriptedModel([
+            Step(Script.CallTool("t1", "ping", NoArgs())),
+        Step(Script.Finish("done"))]);
+
+        await AgentLoop.RunAsync(model, _client, _tools, "go", 5);
+        tracer.ForceFlush();
+
+        Assert.That(spans.Count(s => s.DisplayName == "model.complete"), Is.EqualTo(2));
+        Assert.That(spans.Count(s => s.DisplayName == "tool ping"), Is.EqualTo(1));
     }
 }

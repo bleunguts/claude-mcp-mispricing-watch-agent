@@ -31,12 +31,16 @@ A C# agent built as an MCP server (tool producer) plus a hand-written agent loop
 
 Source layout: `src/MispricingWatch.CurveLab` (simulator library), `src/MispricingWatch.McpServer` (tool producer), `src/MispricingWatch.Agent` (tool orchestrator: hand-written loop, local Qwen, alarm telemetry). Tests are in `tests/`; the scorecard that reads the hidden answer key is `SecretGroundTruthScoreTests`.
 
-## 🔔 See an alarm in the dashboard
+## 🔔 See an alarm and its trace in the dashboard
 
-When the agent decides a price is wrong, it emits the alarm as an OpenTelemetry log record. Any OTLP viewer can show it; the [Aspire dashboard](https://aspire.dev/dashboard/standalone/) is the easiest, needs no Docker, and runs locally.
+The agent sends two OpenTelemetry signals. When it decides a price is wrong it emits the alarm as a **log record**, and every investigation is recorded as a **trace**: one span per model call and per tool call. Any OTLP viewer can show them; the [Aspire dashboard](https://aspire.dev/dashboard/standalone/) is the easiest, needs no Docker, and runs locally.
 
 <p align="center">
-  <img src="docs/img/aspire-alarm.png" alt="Aspire dashboard, structured logs: a Warning from MispricingWatch.Agent, 'Mispricing Alarm on 30Y', with the attributes mispricing.node, mispricing.detector, mispricing.rationale and mispricing.prompt_version." width="800">
+  <img src="docs/img/aspire-alarm.png" alt="Aspire dashboard, structured logs: a Warning from MispricingWatch.Agent, 'Mispricing Alarm on 30Y', with the attributes mispricing.node, mispricing.detector, mispricing.rationale and mispricing.prompt_version, and a TraceId and SpanId that link to the investigation." width="800">
+</p>
+
+<p align="center">
+  <img src="docs/img/aspire-trace.png" alt="Aspire dashboard, trace detail: the root span 'investigate 30Y' with four model.complete spans of 10 to 52 seconds and three tool spans (get_history, get_benchmark, compute_spread_stats) of a few milliseconds each." width="800">
 </p>
 
 One-off setup (installs the Aspire CLI as a global .NET tool):
@@ -57,4 +61,4 @@ In a second terminal, run the agent on the 30Y node, which has a real gap to its
 dotnet run --project src/MispricingWatch.Agent -- live qwen2.5:7b 30Y
 ```
 
-Open the dashboard link and choose **Structured logs**. Only alarms are emitted, so a clean node such as 10Y shows nothing. Each record carries `mispricing.node`, `mispricing.detector`, `mispricing.rationale` and `mispricing.prompt_version`. The agent also prints the record to its own console. To send telemetry to another viewer, set `OTEL_EXPORTER_OTLP_ENDPOINT`.
+Open the dashboard link. In **Structured logs** you will see the alarm. Only alarms are logged, so a clean node such as 10Y shows no alarm. Each record carries `mispricing.node`, `mispricing.detector`, `mispricing.rationale` and `mispricing.prompt_version`, and its TraceId links to the investigation behind it. In **Traces**, every run appears as one trace: the root span `investigate 30Y` with a child span per model call and per tool call, with timings. In the screenshot the run takes about 100 seconds, almost all of it the local model thinking; the three tool calls take milliseconds. Spans carry sizes only (for example `mispricing.result_chars`), never prompt or result text. The agent also prints the alarm to its own console. To send telemetry to another viewer, set `OTEL_EXPORTER_OTLP_ENDPOINT`.

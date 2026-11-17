@@ -2,7 +2,10 @@
 // the hand-written loop (AgentLoop) on a scripted model. No LLM is involved yet (live Qwen run is #56).
 using MispricingWatch.Agent;
 using ModelContextProtocol.Client;
+using OpenTelemetry;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var root = AppContext.BaseDirectory;
 while (!File.Exists(Path.Combine(root, "MispricingWatch.slnx")))
@@ -35,6 +38,12 @@ if (args.Length > 0 && (args[0] == "live" || args[0] == "batch"))
     var runs = args[0] == "batch" && args.Length > 3 ? int.Parse(args[3]) : 1;
     using var http = new HttpClient { BaseAddress = new Uri("http://localhost:11434"), Timeout = TimeSpan.FromMinutes(10) };
     using var telemetry = new AlarmTelemetry(o => { o.AddConsoleExporter(); o.AddOtlpExporter(); });
+    using var tracer = Sdk.CreateTracerProviderBuilder().SetResourceBuilder(ResourceBuilder.
+                            CreateDefault().AddService("Mispricing.Agent"))
+                            .AddSource(AgentTelemetry.SourceName)
+                            .AddConsoleExporter()
+                            .AddOtlpExporter()
+                            .Build();
 
     // What the detector itself says about this node, read the same way the agent can. Used to mark answers right or wrong.
     var statsReply = await client.CallToolAsync("compute_spread_stats", new Dictionary<string, object?> { ["tenor"] = tenor });
@@ -46,6 +55,10 @@ if (args.Length > 0 && (args[0] == "live" || args[0] == "batch"))
     var rows = new List<string>();
     for (var run = 1; run <= runs; run++)
     {
+        using var investigation = AgentTelemetry.Source.StartActivity($"investigate {tenor}");
+        investigation?.SetTag("mispricing.node", tenor);
+        investigation?.SetTag("mispricing.model", modelName);
+        investigation?.SetTag("mispricing.prompt_version", InvestigationPrompt.Version);
         Console.WriteLine($"\n--- run {run} ---");
         var clock = System.Diagnostics.Stopwatch.StartNew();
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(10)); // a stalled model cannot hang the run
@@ -54,6 +67,8 @@ if (args.Length > 0 && (args[0] == "live" || args[0] == "batch"))
             var live = await AgentLoop.RunAsync(
                 new OllamaModel(http, modelName), client, tools, InvestigationPrompt.Question(tenor), maxIterations: 10,
                 InvestigationPrompt.System, InvestigationGuardrails.Problem, cancellationToken: timeout.Token);
+            investigation?.SetTag("mispricing.iterations", live.Iterations);    
+            investigation?.SetTag("mispricing.incomplete", live.Incomplete);
             Report(live);
             Console.WriteLine(AlarmRecord.Parse(live.FinalText, tenor)?.ToJson() ?? "No usable Verdict line.");
             if (live.Incomplete)
