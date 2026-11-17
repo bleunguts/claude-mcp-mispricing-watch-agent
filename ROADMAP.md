@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Scaffold, requirements, README and Phase 1.1 to 1.5 (design, tests project, seeded market, benchmarks, genuine market move) are done. The backlog is cut to a six-session MVP (see "MVP session plan"). Next: 1.6, fault injector (#21).
+**Status:** Phase 1 (simulator) is done. The backlog is cut to a six-session MVP (see "MVP session plan"). Next: 2.1, MCP server scaffold, get_history, get_benchmark (#25).
 
 ## Purpose
 
@@ -176,7 +176,7 @@ sessions, one or two per phase. Everything else is deferred.
 | Phase | Session | Issue | Status |
 |---|---|---|---|
 | 1 | 1.6 Fault injector: setting change only (stale price and unit error deferred, #47) | #21 | done |
-| 1 | 1.7 Scheduler, history output, hidden labels, leakage test | #24 | todo |
+| 1 | 1.7 World builder: one call builds prices plus hidden ground truth, one fault per world, leakage test | #24 | done |
 | 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` | #25 | todo |
 | 2 | 2.2 `compute_spread_stats` (main detector) | #28 | todo |
 | 3 | 3.1 Agent loop, MCP client, prompt, JSON alarm record | #31 | todo |
