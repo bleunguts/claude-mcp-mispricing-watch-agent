@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Scaffold, requirements and README are done. Phase 1 design is agreed (see below). Next: Phase 1.2, tests project and the seeded market.
+**Status:** Scaffold, requirements, README and Phase 1.1 to 1.5 (design, tests project, seeded market, benchmarks, genuine market move) are done. The backlog is cut to a six-session MVP (see "MVP session plan"). Next: 1.6, fault injector (#21).
 
 ## Purpose
 
@@ -167,6 +167,29 @@ Phase 3 onward calls the Claude API and needs a Console API key in `ANTHROPIC_AP
 never committed. Every phase is split into small tutorial-style sessions: concept first,
 then the code written together. Each session follows issue, branch, implementation,
 pull request.
+
+## MVP session plan
+
+A working end-to-end prototype matters more than extra features, so the MVP is six
+sessions, one or two per phase. Everything else is deferred.
+
+| Phase | Session | Issue | Status |
+|---|---|---|---|
+| 1 | 1.6 Fault injector: stale price, unit error, setting change, one config object | #21 | todo |
+| 1 | 1.7 Scheduler, history output, hidden labels, leakage test | #24 | todo |
+| 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` | #25 | todo |
+| 2 | 2.2 `compute_spread_stats` (main detector) | #28 | todo |
+| 3 | 3.1 Agent loop, MCP client, prompt, JSON alarm record | #31 | todo |
+| 3 | 3.2 Fixed-threshold baseline and scorecard | #36 | todo |
+
+Phase 1.1 to 1.5 (#16 to #20) are done.
+
+**Deferred, open and labelled `deferred`:** `compute_history_outlier` (#29),
+`check_stale` (#30), OpenTelemetry emission (#34), separate guardrails story (#37).
+Until #29 lands, faults are planted on benchmarked nodes only, and the no-benchmark
+node reports "unavailable" with no alarm. The alarm is a JSON record on the console
+until #34. The leakage test lives in 1.7, and the agent is read-only because the tools
+only read. Phases 4 to 7 above are unchanged.
 
 The architecture diagram is in the [README](./README.md).
 
