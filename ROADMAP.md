@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. The scorecard compares the spread detector with a fixed-threshold baseline against the hidden labels (#36). Alarms are emitted as OpenTelemetry log records and each investigation as a trace, both shown in the Aspire dashboard (#34, #66). Next: 4.1, the manual Claude Desktop run. Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
+**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. The scorecard compares the spread detector with a fixed-threshold baseline against the hidden labels (#36). Alarms are emitted as OpenTelemetry log records and each investigation as a trace, both shown in the Aspire dashboard (#34, #66). The manual Claude Desktop run is done (#61): it saw the frozen stale price every time but followed prompt `v1` and missed it. Next: 4.2, prompt `v2` that uses `check_stale` (#72). Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
 
 ## Purpose
 
@@ -235,6 +235,43 @@ hidden labels (#36).
 - **Limits:** one clean and one faulted node, not scored against ground truth. One 3b run took 92 minutes because
   the laptop slept mid-run; ignore that time.
 
+## What Claude Desktop showed (4.1)
+
+Same MCP server, same prompt `v1` pasted at the start of a fresh chat, seed 42, no loop guardrails, Pro login. The
+stale case sets `MISPRICING_FAULT=StalePrice` (the server reads it like the seed). Scored by hand against the hidden
+labels.
+
+| Case | Node | Runs | OK | ALARM | Against truth |
+|---|---|---|---|---|---|
+| Setting change | 10Y, clean | 5 | 5 | 0 | 5 hits |
+| Setting change | 30Y, 5 bps offset | 5 | 0 | 5 | 5 hits |
+| Stale price | 10Y, clean | 5 | 5 | 0 | 5 hits, 0 false alarms |
+| Stale price | 30Y, frozen | 6 | 6 | 0 | 0 hits, 6 misses |
+
+For comparison, Qwen's first verdict agreed with `compute_spread_stats` on 10Y in 2 of 5 runs (3b) and 5 of 5 (7b), and
+5 of 5 on 30Y for both. Qwen was not run on the stale node: the loop forces its verdict to match the spread detector, so
+it would miss by construction.
+
+- **Desktop reasons, then obeys the prompt.** On stale 30Y all 6 runs saw in `get_history` that the published price sat
+  at 3.6878 in every bucket while the benchmark moved, and all named `check_stale` as the next step. None called it,
+  because `v1` lists three tools and says to decide from `compute_spread_stats` (score -2.687, tolerance 3.49 bps, 0
+  ticks outside). All 6 said OK. The miss is the prompt, not the model; prompt `v2` is #72.
+- **It weighs ambiguous rules, and follows clear ones.** On the setting-change 30Y the rule "score large and
+  ticksOutside high" was ambiguous (score 5.955, ticksOutside 3). 4 of 5 runs said so and used the all-day offset in the
+  history to call ALARM. On stale 30Y the rule said OK clearly, and it did not override it.
+- **Same detector blind spot as the scorecard.** Desktop's verdict matched the spread detector in all 21 runs, so it
+  inherits its stale-price misses (16 of 100 on the scorecard).
+- **Format drifts.** Most runs added a preamble before the two-line ending, and some rationales ran past one sentence.
+  Not tuned.
+- **One misread figure.** 10Y (setting-change) run 5 put the largest history gap at about 1.5 bps; the data shows about
+  0.2 bps. The verdict was right.
+- **Client quirk.** Desktop loads tool schemas lazily; in run 1 the first `get_history` was rejected ("input schema was
+  not in your prompt"), and the model loaded the schema and retried. This is Desktop's, not the server's, and Qwen never
+  hit it.
+- **Limits:** one seed, one faulted node per fault type, both easy to read in the history. 5 or 6 manual runs per case,
+  not repeatable like a script. Two 30Y stale runs (3 and 4) had identical text, possibly a paste duplicate. Tool order
+  was recorded for run 1 only.
+
 ## What the scorecard showed (3.2)
 
 One NUnit test, `SecretGroundTruthScoreTests` in the McpServer test project, is the only code that reads the hidden
@@ -318,7 +355,8 @@ of sessions, one or two per phase. Everything else is deferred.
 | 3 | 3.2 Fixed-threshold baseline and scorecard | #36 | done |
 | 3 | 3.4 Emit alarms as OpenTelemetry log records, viewed in the Aspire dashboard | #34 | done |
 | 3 | 3.5 Trace each investigation: a span per model call and tool call, alarm linked to its trace | #66 | done |
-| 4 | 4.1 Manual run in Claude Desktop, scored and compared with Qwen | #61 | todo |
+| 4 | 4.1 Manual run in Claude Desktop, scored and compared with Qwen | #61 | done |
+| 4 | 4.2 Prompt `v2` that uses `check_stale`, rerun in Claude Desktop | #72 | todo |
 
 Phase 1.1 to 1.5 (#16 to #20) are done.
 
