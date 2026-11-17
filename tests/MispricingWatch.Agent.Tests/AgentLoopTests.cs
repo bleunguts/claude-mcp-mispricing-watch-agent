@@ -84,6 +84,40 @@ public class AgentLoopTests
     }
 
     [Test]
+    public async Task RunAsync_AnswerBeforeMethodDone_IsNudgedThenAccepted()
+    {
+        var model = new ScriptedModel([
+            Step(Script.Finish("Verdict: OK\nRationale: guess")),
+            Step(Script.CallTool("t1", "get_history", new() { ["tenor"] = "10Y", ["window"] = "1D" })),
+            Step(Script.CallTool("t2", "get_benchmark", new() { ["tenor"] = "10Y", ["window"] = "1D" })),
+            Step(Script.CallTool("t3", "compute_spread_stats", new() { ["tenor"] = "10Y" })),
+            Step(Script.Finish("Verdict: OK\nRationale: inside tolerance"))]);
+
+        var result = await AgentLoop.RunAsync(
+            model, _client, _tools, "go", 10, answerProblem: InvestigationGuardrails.Problem);
+
+        Assert.That(result.Incomplete, Is.False);
+        Assert.That(result.Iterations, Is.EqualTo(5));
+        var nudge = (TextBlock)result.Messages[2].Content.Single();
+        Assert.That(nudge.Text, Does.StartWith("You have not finished. Call get_history"));
+    }
+
+    [Test]
+    public async Task RunAsync_ModelIgnoresNudges_StopsIncompleteAfterNudgeLimit()
+    {
+        var model = new ScriptedModel(Enumerable.Range(0, 10)
+            .Select(_ => Step(Script.Finish("Verdict: OK\nRationale: guess"))));
+
+        var result = await AgentLoop.RunAsync(
+            model, _client, _tools, "go", 10, answerProblem: InvestigationGuardrails.Problem, maxNudges: 2);
+
+        Assert.That(result.StopReason, Is.EqualTo(LoopStopReason.Completed));
+        Assert.That(result.Incomplete, Is.True);
+        Assert.That(result.Iterations, Is.EqualTo(3)); // the first answer plus two nudged retries
+        Assert.That(result.Problem, Does.Contain("get_history"));
+    }
+
+    [Test]
     public async Task RunAsync_UnknownTool_ReturnsErrorResultAndContinues()
     {
         var model = new ScriptedModel([
