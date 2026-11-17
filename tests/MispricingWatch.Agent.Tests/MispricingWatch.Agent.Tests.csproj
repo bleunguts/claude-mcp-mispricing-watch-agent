@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MispricingWatch.Agent\MispricingWatch.Agent.csproj" />
+    <!-- Build the server first: the loop tests launch its dll over stdio. -->
+    <ProjectReference Include="..\..\src\MispricingWatch.McpServer\MispricingWatch.McpServer.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
