@@ -106,6 +106,21 @@ public class InvestigationGuardrailsTests
         Assert.That(problem, Does.Contain("check_stale"));
     }
 
+    [TestCase(InsideTolerance, NotStale, false)]
+    [TestCase(OutsideTolerance, NotStale, true)]
+    [TestCase(InsideTolerance, Stale, true)]
+    [TestCase("""{"available":false}""", Stale, true)]
+    public void ExpectedAlarm_SpreadOrStale_AlarmWhenEitherFires(string stats, string stale, bool expected)
+    {
+        Assert.That(InvestigationGuardrails.ExpectedAlarm(stats, stale), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ExpectedAlarm_NoBenchmarkAndNotStale_ReturnsNull()
+    {
+        Assert.That(InvestigationGuardrails.ExpectedAlarm("""{"available":false}""", NotStale), Is.Null);
+    }
+
     [Test]
     public void Problem_OutsideToleranceButNotStale_AlarmVerdict_ReturnsNull()
     {

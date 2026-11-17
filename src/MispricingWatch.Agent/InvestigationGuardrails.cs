@@ -52,6 +52,19 @@ public static class InvestigationGuardrails
                $"so the verdict must be {(spread.Value.Alarm ? "ALARM" : "OK")}. Check your verdict against these figures.";
     }
 
+    // The detectors' combined answer: alarm when the spread is outside tolerance or the price is frozen.
+    // Null when there is nothing to judge (no benchmark and not stale).
+    public static bool? ExpectedAlarm(string statsJson, string staleJson)
+    {
+        var spread = ExpectedAlarm(statsJson);
+        bool isStale = IsStale(staleJson);
+        if (spread == null && !isStale)
+        {
+            return null;
+        }
+        return spread?.Alarm == true || isStale;
+    }
+
     // Whether check_stale reported a frozen price. A missing or non-boolean field counts as not stale.
     public static bool IsStale(string staleJson)
     {
