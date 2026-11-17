@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. Next: Phase 3 scorecard (#36). Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
+**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. The scorecard compares the spread detector with a fixed-threshold baseline against the hidden labels (#36). Next: 4.1, the manual Claude Desktop run. Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
 
 ## Purpose
 
@@ -235,6 +235,23 @@ hidden labels (#36).
 - **Limits:** one clean and one faulted node, not scored against ground truth. One 3b run took 92 minutes because
   the laptop slept mid-run; ignore that time.
 
+## What the scorecard showed (3.2)
+
+One NUnit test, `SecretGroundTruthScoreTests` in the McpServer test project, is the only code that reads the hidden
+labels. Run it with `dotnet test --filter SecretGroundTruth --logger "console;verbosity=detailed"`. For each of
+100 seeds it builds a faulted world and a clean world and checks the four benchmarked nodes at the end of the window
+(the fault never ends, so an alarm on the faulted node is a hit and any other alarm is a false alarm).
+
+| Detector | Hits | False alarms | Missed | Precision | Miss rate |
+|---|---|---|---|---|---|
+| Spread, per-node tolerance | 100 | 0 | 0 | 100% | 0% |
+| Fixed threshold, 2 bps | 100 | 4 | 0 | 96.2% | 0% |
+
+Both meet the targets (precision at least 80%, miss rate at most 5%); the test fails if the spread detector does not.
+The scenario is easy: every fault is a permanent 5 bps offset, so any sensible threshold catches it, and the baseline's
+2 bps is a free choice. The agent is not scored directly because its verdict is forced to match the spread detector.
+Harder faults (stale price, unit error, #47) and a history detector (#29) are what would separate the detectors.
+
 ## MVP session plan
 
 A working end-to-end prototype matters more than extra features, so the MVP is a handful
@@ -249,7 +266,7 @@ of sessions, one or two per phase. Everything else is deferred.
 | 3 | 3.0 Port the model layer from the flaky agent (copy, no loop) | #51 | done |
 | 3 | 3.1 Agent loop and MCP client, proven on a scripted model | #31 | done |
 | 3 | 3.1b Investigation prompt, JSON alarm record, live run on local Qwen | #56 | done |
-| 3 | 3.2 Fixed-threshold baseline and scorecard | #36 | todo |
+| 3 | 3.2 Fixed-threshold baseline and scorecard | #36 | done |
 | 4 | 4.1 Manual run in Claude Desktop, scored and compared with Qwen | new | todo |
 
 Phase 1.1 to 1.5 (#16 to #20) are done.
