@@ -135,8 +135,8 @@ What the real-world answers told us:
 A fake world, planted faults, and one question per node: alarm or no alarm.
 
 - **Simulator:** one small curve with about a month of history, a benchmark series, and
-  at least one node with no benchmark. Faults are planted at known times: a stale price,
-  a unit error, and a setting change. Genuine market moves are planted too and should
+  at least one node with no benchmark. Faults are planted at known times: a setting
+  change first (stale price and unit error are deferred, #47). Genuine market moves are planted too and should
   stay quiet. The agent never sees the hidden labels.
 - **Five tools, all deterministic:** `get_history`, `get_benchmark` (it says explicitly
   when none exists), `compute_spread_stats`, `compute_history_outlier`, `check_stale`.
@@ -175,7 +175,7 @@ sessions, one or two per phase. Everything else is deferred.
 
 | Phase | Session | Issue | Status |
 |---|---|---|---|
-| 1 | 1.6 Fault injector: stale price, unit error, setting change, one config object | #21 | todo |
+| 1 | 1.6 Fault injector: setting change only (stale price and unit error deferred, #47) | #21 | done |
 | 1 | 1.7 Scheduler, history output, hidden labels, leakage test | #24 | todo |
 | 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` | #25 | todo |
 | 2 | 2.2 `compute_spread_stats` (main detector) | #28 | todo |
