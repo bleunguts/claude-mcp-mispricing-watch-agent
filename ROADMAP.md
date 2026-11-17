@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. The scorecard compares the spread detector with a fixed-threshold baseline against the hidden labels (#36). Alarms are emitted as OpenTelemetry log records and shown in the Aspire dashboard (#34). Next: 4.1, the manual Claude Desktop run. Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
+**Status:** Phase 1 (simulator) is done. The plan now runs the loop on a local Ollama model and ends with a manual Claude Desktop run (see "Lessons from the flaky agent"). The model layer is ported (#51) and the MCP server scaffold with `get_history` and `get_benchmark` is built (#25). `compute_spread_stats` is written (#28). The hand-written agent loop runs end to end on a scripted model against the real server (#31). The investigation prompt, alarm record, loop guardrails and live Qwen runs are done (#56): 7b needs no nudges, 3b needs the guardrails. The scorecard compares the spread detector with a fixed-threshold baseline against the hidden labels (#36). Alarms are emitted as OpenTelemetry log records and each investigation as a trace, both shown in the Aspire dashboard (#34, #66). Next: 4.1, the manual Claude Desktop run. Phase 1 and 2 parent issues (#13, #14) are closed; only deferred items remain open under them.
 
 ## Purpose
 
@@ -280,7 +280,7 @@ The simulator is generous here: a healthy price never repeats a value (longest f
 rule looks better than it would on real feeds. The agent does not call `check_stale` yet; that needs a prompt `v2` and a
 rerun of the Qwen runs.
 
-## How alarms are emitted (3.4)
+## How alarms and traces are emitted (3.4, 3.5)
 
 `AlarmTelemetry` in the Agent sends one OpenTelemetry **log record** per alarm (an alarm is a discrete event with
 details, which is what a log record is). Severity is Warning, and only alarms are emitted, not OK verdicts. Attributes
@@ -290,6 +290,14 @@ default `localhost:4317`) in the program, an in-memory exporter in the test. The
 stdout remains the protocol channel. The viewer is the standalone Aspire dashboard (`aspire dashboard run`, no Docker);
 steps and a screenshot are in the [README](./README.md). Grafana, Prometheus and a collector were left out: each adds
 installs for no gain at this size. A counter metric (alarms by node) is a possible later addition.
+
+Each investigation is also a **trace** (3.5). `Program.cs` starts the root span `investigate <tenor>` (node, model,
+prompt version, iterations, incomplete) and emits the alarm while it is open, so the alarm log row links to its trace.
+`AgentLoop` adds a child span per model call (`model.complete`) and per tool call (`tool <name>`, with result size and
+error flag; extra calls skipped by the one-tool-per-turn rule are marked `mispricing.skipped`) and the nudge count.
+Spans carry sizes only, never prompt or result text, and all names are our own `mispricing.*`. One source,
+`AgentTelemetry.Source`, is shared by the loop, the program and the tests. In the Aspire waterfall a 30Y run takes about
+100 seconds, almost all of it the model; the tool calls take milliseconds.
 
 ## MVP session plan
 
@@ -309,6 +317,7 @@ of sessions, one or two per phase. Everything else is deferred.
 | 3 | 3.1b Investigation prompt, JSON alarm record, live run on local Qwen | #56 | done |
 | 3 | 3.2 Fixed-threshold baseline and scorecard | #36 | done |
 | 3 | 3.4 Emit alarms as OpenTelemetry log records, viewed in the Aspire dashboard | #34 | done |
+| 3 | 3.5 Trace each investigation: a span per model call and tool call, alarm linked to its trace | #66 | done |
 | 4 | 4.1 Manual run in Claude Desktop, scored and compared with Qwen | #61 | todo |
 
 Phase 1.1 to 1.5 (#16 to #20) are done.

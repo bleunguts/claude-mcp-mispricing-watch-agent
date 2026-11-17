@@ -1,5 +1,6 @@
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
+using System.Diagnostics;
 
 namespace MispricingWatch.Agent;
 
@@ -36,7 +37,12 @@ public static class AgentLoop
 
         for (var iteration = 1; iteration <= maxIterations; iteration++)
         {
-            var response = await model.CompleteAsync(messages, tools, systemPrompt, cancellationToken);
+            ModelResponse response;
+            using(var modelSpan = AgentTelemetry.Source.StartActivity("model.complete"))
+            {
+                modelSpan?.SetTag("mispricing.messages", messages.Count);
+                response = await model.CompleteAsync(messages, tools, systemPrompt, cancellationToken);
+            }
             messages.Add(new Message("assistant", response.Content));
 
             var toolUses = response.Content.OfType<ToolUseBlock>().ToList();
@@ -51,6 +57,7 @@ public static class AgentLoop
                 if (problem != null && nudges < maxNudges && iteration < maxIterations)
                 {
                     nudges++;
+                    Activity.Current?.SetTag("mispricing.nudges", nudges);
                     messages.Add(new Message("user", [new TextBlock($"You have not finished. {problem}")]));
                     continue;
                 }
@@ -64,22 +71,32 @@ public static class AgentLoop
             {
                 if (toolResults.Count > 0)
                 {
+                    using (var skipped = AgentTelemetry.Source.StartActivity($"tool {toolUse.Name}"))
+                    {
+                        skipped?.SetTag("tool.name", toolUse.Name);
+                        skipped?.SetTag("mispricing.skipped", true);
+                    }
                     toolResults.Add(new ToolResultBlock(toolUse.Id, SkippedMessage, true));
-                    continue;
+                    continue;                                       
                 }
+                using var toolSpan = AgentTelemetry.Source.StartActivity($"tool {toolUse.Name}");
+                toolSpan?.SetTag("tool.name", toolUse.Name);
 
                 try
-                {
+                {                    
                     var toolResponse = await client.CallToolAsync(toolUse.Name, toolUse.Input, cancellationToken: cancellationToken);
                     var text = string.Join("\n", toolResponse.Content.OfType<TextContentBlock>().Select(c => c.Text));
                     toolResults.Add(new ToolResultBlock(toolUse.Id, text, toolResponse.IsError == true));
                     executions.Add(new ToolExecution(toolUse.Name, toolUse.Input, text, toolResponse.IsError == true));
+                    toolSpan?.SetTag("mispricing.result_chars", text.Length);
+                    toolSpan?.SetTag("mispricing.is_error", toolResponse.IsError == true);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // A failing tool is information for the model, not a crash of the loop.
                     toolResults.Add(new ToolResultBlock(toolUse.Id, $"Tool call failed. {ex.Message}", true));
                     executions.Add(new ToolExecution(toolUse.Name, toolUse.Input, ex.Message, true));
+                    toolSpan?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 }
             }
             messages.Add(new Message("user", toolResults));
