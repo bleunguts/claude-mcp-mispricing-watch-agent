@@ -262,9 +262,23 @@ grows as the market drifts. Same 100 seeds, same scoring:
 The spread detector now misses its 5% target (and the 10% hard limit); 10 of the 16 misses are on 30Y (the noisy competitor benchmark,
 tolerance 3.5 bps), 4 on 2Y, 2 on 10Y, none on 5Y. Late onset is part of it (7 of 20 missed when the price had been frozen
 for under 600 ticks, 1 of 12 after 1,500) but not all: the frozen gap is a random walk and can wander back inside
-tolerance even after 1,400 ticks. The stale price check
-(`check_stale`, #30) is the candidate fix, and is left deferred until a decision is made. The stale table is reported,
-not asserted. The unit error (#62) is still deferred; a history detector (#29) would be tested on it.
+tolerance even after 1,400 ticks. The unit error (#62) is still deferred; a history detector (#29) would be tested on it.
+
+`check_stale` (#30) fixes the stale-price misses. It counts how many of the latest ticks are identical to the tick before
+them, and how far the benchmark moved over those ticks; a flat price of at least 30 ticks while the benchmark moves is
+stale (a flat price next to a flat benchmark is a quiet market). The scorecard now holds "spread or stale" to the
+targets on both fault types:
+
+| Detector | Fault | Hits | False alarms | Missed | Precision | Miss rate |
+|---|---|---|---|---|---|---|
+| Spread, per-node tolerance | Stale price | 84 | 0 | 16 | 100% | 16% |
+| Stale check alone | Stale price | 100 | 0 | 0 | 100% | 0% |
+| Spread or stale | Stale price | 100 | 0 | 0 | 100% | 0% |
+| Spread or stale | Setting change | 100 | 0 | 0 | 100% | 0% |
+
+The simulator is generous here: a healthy price never repeats a value (longest flat run 0 ticks in 500 series), so the
+rule looks better than it would on real feeds. The agent does not call `check_stale` yet; that needs a prompt `v2` and a
+rerun of the Qwen runs.
 
 ## MVP session plan
 
@@ -278,6 +292,7 @@ of sessions, one or two per phase. Everything else is deferred.
 | 1 | 1.7 World builder: one call builds prices plus hidden ground truth, one fault per world, leakage test | #24 | done |
 | 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` (48 bucket averages per call) | #25 | done |
 | 2 | 2.2 `compute_spread_stats` (main detector) | #28 | done |
+| 2 | 2.6 `check_stale` (frozen price) | #30 | done |
 | 3 | 3.0 Port the model layer from the flaky agent (copy, no loop) | #51 | done |
 | 3 | 3.1 Agent loop and MCP client, proven on a scripted model | #31 | done |
 | 3 | 3.1b Investigation prompt, JSON alarm record, live run on local Qwen | #56 | done |
@@ -287,7 +302,7 @@ of sessions, one or two per phase. Everything else is deferred.
 Phase 1.1 to 1.5 (#16 to #20) are done.
 
 **Deferred, open and labelled `deferred`:** `compute_history_outlier` (#29),
-`check_stale` (#30), OpenTelemetry emission (#34), separate guardrails story (#37).
+OpenTelemetry emission (#34), separate guardrails story (#37).
 Until #29 lands, faults are planted on benchmarked nodes only, and the no-benchmark
 node reports "unavailable" with no alarm. The alarm is a JSON record on the console
 until #34. The leakage test lives in 1.7, and the agent is read-only because the tools

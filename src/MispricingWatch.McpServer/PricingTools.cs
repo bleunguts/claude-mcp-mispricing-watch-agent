@@ -37,7 +37,18 @@ public class PricingTools(WorldService world)
             : SpreadStats.Compute(node, _spread);
     }
 
+    [McpServerTool(Name = "check_stale"),
+     Description($"Evidence about whether one node's published price has frozen. Tenor is one of {Tenors}. Returns UnchangedTicks, how many of the latest ticks in a row are identical to the tick before them, and BenchmarkMoveBps, how far the benchmark moved over those same ticks. Stale is true when the price has been unchanged for many ticks while the benchmark kept moving. A healthy price changes every tick; a flat price next to a flat benchmark is just a quiet market. HasBenchmark is false when the node has no benchmark.")]
+    public StaleCheckResult CheckStale(string tenor)
+    {
+        var node = world.Find(tenor);
+        return node is null
+            ? new StaleCheckResult(null, 0, false, null, false, $"unknown tenor '{tenor}'. Use one of: {Tenors}")
+            : StaleCheck.Compute(node, _stale);
+    }
+
     private readonly SpreadParams _spread = SpreadParams.FromEnvironment();
+    private readonly StaleParams _stale = StaleParams.FromEnvironment();
 
     private SeriesResult Series(string tenor, string window, Func<CurveLab.NodePrices, double[]?> pick)
     {
