@@ -27,6 +27,18 @@ public class PricingTools(WorldService world)
      Description($"The independent benchmark price of one node, in percent, with the same buckets as get_history so the two line up. Tenor is one of {Tenors}. Window is one of {Windows}. Available is false when the node has no benchmark.")]
     public SeriesResult GetBenchmark(string tenor, string window) => Series(tenor, window, p => p.Benchmark);
 
+    [McpServerTool(Name = "compute_spread_stats"),
+     Description($"Evidence about whether one node's published price is off its benchmark. Tenor is one of {Tenors}. Returns the node's normal noise (SigmaBps), its tolerance (ToleranceBps), the latest gap (CurrentSpreadBps), the Score (gap in sigmas), and TicksOutside, how many of the latest ticks in a row are beyond tolerance. Many ticks outside means the gap is persistent. Available is false when the node has no benchmark.")]
+    public SpreadStatsResult ComputeSpreadStats(string tenor)
+    {
+        var node = world.Find(tenor);
+        return node is null
+            ? new SpreadStatsResult(null, false, 0, 0, 0, 0, 0, 0, 0, false, $"unknown tenor '{tenor}'. Use one of: {Tenors}")
+            : SpreadStats.Compute(node, _spread);
+    }
+
+    private readonly SpreadParams _spread = SpreadParams.FromEnvironment();
+
     private SeriesResult Series(string tenor, string window, Func<CurveLab.NodePrices, double[]?> pick)
     {
         var node = world.Find(tenor);
