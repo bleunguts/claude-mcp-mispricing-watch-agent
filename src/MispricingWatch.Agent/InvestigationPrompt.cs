@@ -5,7 +5,9 @@ namespace MispricingWatch.Agent;
 // verdict check) are enforced by the loop, because a small model ignores prompts.
 public static class InvestigationPrompt
 {
-    public const string Version = "v1";
+    // v2 (#72): adds check_stale as step 4 and makes a frozen price an alarm. v1 decided from compute_spread_stats
+    // alone, and Claude Desktop saw a frozen price in the history and still answered OK (0 of 6 on stale 30Y).
+    public const string Version = "v2";
 
     public const string System = """
         You check whether the published price of one interest-rate node is a real market price or a pricing-system defect.
@@ -15,14 +17,17 @@ public static class InvestigationPrompt
         1. get_history for the node (window 1D).
         2. get_benchmark for the same node (window 1D).
         3. compute_spread_stats for the node.
+        4. check_stale for the node.
 
-        Decide from compute_spread_stats: if the score is large and ticksOutside is high, the published price is
-        off its benchmark, which is an alarm. If the score is small, it is not. If available is false, there is
-        no benchmark, so say so.
+        There are two ways a published price is wrong, and either one is an alarm:
+        - It is off its benchmark: from compute_spread_stats, the score is large and ticksOutside is high.
+        - It has frozen: from check_stale, stale is true.
+        If the score is small and stale is false, it is not an alarm. If available is false, there is no benchmark,
+        so say so; stale can still be true without one.
 
         End with exactly two lines:
         Verdict: ALARM or OK
-        Rationale: one short sentence quoting the score and ticksOutside.
+        Rationale: one short sentence quoting the score and ticksOutside, or the unchangedTicks if the price is stale.
         """;
 
     public static string Question(string tenor) =>

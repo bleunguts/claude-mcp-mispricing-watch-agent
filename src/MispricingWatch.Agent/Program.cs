@@ -46,11 +46,15 @@ if (args.Length > 0 && (args[0] == "live" || args[0] == "batch"))
                             .Build();
 
     // What the detector itself says about this node, read the same way the agent can. Used to mark answers right or wrong.
-    var statsReply = await client.CallToolAsync("compute_spread_stats", new Dictionary<string, object?> { ["tenor"] = tenor });
-    var expected = InvestigationGuardrails.ExpectedAlarm(
-        string.Join("", statsReply.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(c => c.Text)));
-    var expectedText = expected is { } e ? (e.Alarm ? "ALARM" : "OK") : "n/a (no benchmark)";
-    Console.WriteLine($"\n=== {modelName} on {tenor}, prompt {InvestigationPrompt.Version}, {runs} run(s); spread stats say: {expectedText} ===");
+    async Task<string> ToolText(string tool)
+    {
+        var reply = await client.CallToolAsync(tool, new Dictionary<string, object?> { ["tenor"] = tenor });
+        return string.Join("", reply.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(c => c.Text));
+    }
+    // Spread or stale, the same rule the guardrails enforce, so a frozen price is marked ALARM here too.
+    var expected = InvestigationGuardrails.ExpectedAlarm(await ToolText("compute_spread_stats"), await ToolText("check_stale"));
+    var expectedText = expected is { } e ? (e ? "ALARM" : "OK") : "n/a (no benchmark, not stale)";
+    Console.WriteLine($"\n=== {modelName} on {tenor}, prompt {InvestigationPrompt.Version}, {runs} run(s); spread or stale says: {expectedText} ===");
 
     var rows = new List<string>();
     for (var run = 1; run <= runs; run++)
@@ -131,7 +135,7 @@ static void Report(LoopResult result)
 
 // One line per run: time, iterations, how many nudges it took, the first and final verdict, and whether the
 // first verdict matched what compute_spread_stats says (the measure of the model's own judgement).
-static string SummaryRow(int run, LoopResult result, (bool Alarm, double GapBps, double ToleranceBps)? expected, TimeSpan elapsed)
+static string SummaryRow(int run, LoopResult result, bool? expected, TimeSpan elapsed)
 {
     var nudges = result.Messages.Count(m => m.Role == "user"
         && m.Content.OfType<TextBlock>().Any(t => t.Text.StartsWith("You have not finished")));
@@ -141,7 +145,7 @@ static string SummaryRow(int run, LoopResult result, (bool Alarm, double GapBps,
     string Name(bool? alarm) => alarm == null ? "-" : alarm.Value ? "ALARM" : "OK";
     var first = verdicts.Count > 0 ? verdicts[0] : (bool?)null;
     var final = verdicts.Count > 0 ? verdicts[^1] : (bool?)null;
-    var right = expected is { } e && first != null ? (first == e.Alarm ? "yes" : "NO") : "-";
+    var right = expected is { } e && first != null ? (first == e ? "yes" : "NO") : "-";
     return $"{run,3} {elapsed.TotalSeconds,5:F0}s {result.Iterations,5} {nudges,6} {Name(first),-6} {Name(final),-6} {right,-6} {(result.Incomplete ? "INCOMPLETE" : "no")}";
 }
 
