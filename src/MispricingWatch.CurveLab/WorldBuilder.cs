@@ -1,7 +1,7 @@
 namespace MispricingWatch.CurveLab;
 
 /// <summary>The answer key. Only the scorer may see this; tools and agent never get it.</summary>
-public sealed record GroundTruth(MarketMoveLabel MarketMove, FaultLabel? Fault);
+public sealed record GroundTruth(MarketMoveLabel MarketMove, FaultLabel? Fault, QuietMarketLabel? Quiet = null);
 
 public static class WorldBuilder
 {
@@ -12,12 +12,17 @@ public static class WorldBuilder
 
     /// <summary>
     /// Builds the whole world from one seed: market, one genuine market move, published and
-    /// benchmark series, and (optionally) one setting-change fault on a benchmarked node.
+    /// benchmark series, and (optionally) one planted fault or one quiet spell on a benchmarked node.
     /// Prices go to the tools. Truth goes to the scorer.
     /// </summary>
     public static (NodePrices[] Prices, GroundTruth Truth) Build(
-        int seed, bool plantFault = true, FaultType faultType = FaultType.SettingChange)
+        int seed, bool plantFault = true, FaultType faultType = FaultType.SettingChange, bool quietMarket = false)
     {
+        if (plantFault && quietMarket)
+        {
+            throw new ArgumentException("A world has one planted thing: a fault or a quiet market, not both.", nameof(quietMarket));
+        }
+
         var nodes = NodeSpec.Mvp;
         var trueRates = MarketSimulator.GenerateTrueRates(nodes, TotalTicks, seed);
         var move = new ScenarioInjector().ApplyMarketMove(trueRates, seed);
@@ -35,6 +40,16 @@ public static class WorldBuilder
                 : FaultInjector.ApplySettingChange(victim, onset, durationTicks: null, FaultOffsetBps);
         }
 
-        return (prices, new GroundTruth(move, fault));
+        QuietMarketLabel? quiet = null;
+        if (quietMarket)
+        {
+            var rng = new Random(seed ^ 0x0A1E7);
+            var benchmarked = prices.Where(p => p.Benchmark is not null).ToArray();
+            var victim = benchmarked[rng.Next(benchmarked.Length)];
+            var onset = rng.Next(TotalTicks / 2, TotalTicks * 9 / 10);
+            quiet = QuietMarketInjector.Apply(victim, onset);
+        }
+
+        return (prices, new GroundTruth(move, fault, quiet));
     }
 }

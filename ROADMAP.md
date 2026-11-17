@@ -297,6 +297,19 @@ else in the prompt is unchanged. Same server, seed 42, `MISPRICING_FAULT=StalePr
   flat price and a flat benchmark, where `check_stale` should stay false, was not tested. 30Y runs 2 and 3 are
   near-identical text, possibly a paste duplicate. Qwen was not rerun.
 
+### Quiet market (4.3)
+
+The false-alarm side of `v2` had only been checked on a moving, healthy market. `QuietMarketInjector` adds a world with
+no fault where one benchmarked node's published price and benchmark both hold their last value from an onset tick to
+the end; the truth for it is "no alarm". `WorldBuilder.Build(seed, plantFault: false, quietMarket: true)` builds it and
+the server serves it with `MISPRICING_QUIET=true` (instead of `MISPRICING_FAULT`).
+
+- **Result:** across 100 seeds and every node, neither the spread detector nor `check_stale` alarmed once (0 false
+  alarms). `check_stale` stays false because the benchmark is flat too, and the frozen gap stays inside tolerance.
+- **Limits:** this checks the tools and the combined rule, not a model. No Claude Desktop run on the quiet node has been
+  done yet. The quiet spell lasts to the end of the series, longer than a real one, and the gap freezes at whatever it
+  was on the last tick, so a freeze at an unusually wide gap could still alarm; 100 seeds did not hit that.
+
 ## What the scorecard showed (3.2)
 
 One NUnit test, `SecretGroundTruthScoreTests` in the McpServer test project, is the only code that reads the hidden
@@ -382,6 +395,7 @@ of sessions, one or two per phase. Everything else is deferred.
 | 3 | 3.5 Trace each investigation: a span per model call and tool call, alarm linked to its trace | #66 | done |
 | 4 | 4.1 Manual run in Claude Desktop, scored and compared with Qwen | #61 | done |
 | 4 | 4.2 Prompt `v2` that uses `check_stale`, rerun in Claude Desktop | #72 | done |
+| 4 | 4.3 Quiet-market world, no false alarm from spread or stale (tools done; Desktop run optional) | #75 | done |
 
 Phase 1.1 to 1.5 (#16 to #20) are done.
 

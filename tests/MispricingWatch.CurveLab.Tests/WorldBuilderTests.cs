@@ -72,6 +72,36 @@ public class WorldBuilderTests
     }
 
     [Test]
+    public void Build_QuietMarket_FreezesBothSeriesOfOneBenchmarkedNodeToTheEnd()
+    {
+        var (prices, truth) = WorldBuilder.Build(Seed, plantFault: false, quietMarket: true);
+
+        var quiet = truth.Quiet!;
+        Assert.That(quiet.Tenor, Is.Not.EqualTo("3W"));
+        Assert.That(truth.Fault, Is.Null);
+        var node = prices.Single(p => p.Tenor == quiet.Tenor);
+        for (var t = quiet.OnsetTick; t < node.Published.Length; t++)
+        {
+            Assert.That(node.Published[t], Is.EqualTo(node.Published[quiet.OnsetTick - 1]));
+            Assert.That(node.Benchmark![t], Is.EqualTo(node.Benchmark[quiet.OnsetTick - 1]));
+        }
+    }
+
+    [Test]
+    public void Build_DefaultWorld_HasNoQuietLabel()
+    {
+        var (_, truth) = WorldBuilder.Build(Seed);
+
+        Assert.That(truth.Quiet, Is.Null);
+    }
+
+    [Test]
+    public void Build_QuietMarketAndFaultTogether_Throws()
+    {
+        Assert.Throws<ArgumentException>(() => WorldBuilder.Build(Seed, plantFault: true, quietMarket: true));
+    }
+
+    [Test]
     public void NodePrices_PublicShape_ExposesNoLabelTypes()
     {
         var labelTypes = new[] { typeof(FaultLabel), typeof(MarketMoveLabel), typeof(GroundTruth) };
