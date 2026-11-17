@@ -4,6 +4,11 @@
     <ProjectReference Include="..\MispricingWatch.CurveLab\MispricingWatch.CurveLab.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
+    <PackageReference Include="ModelContextProtocol" Version="2.3.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>

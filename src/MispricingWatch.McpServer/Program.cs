@@ -1,7 +1,18 @@
-// TODO (Phase 2): MCP server entry point - the tool PRODUCER.
-// - Host with Microsoft.Extensions.Hosting + ModelContextProtocol (stdio transport).
-// - Register [McpServerTool] handlers (get_recent_snapshots, compute_tenor_volatility, ...).
-// - stdio: log to stderr ONLY. stdout is the protocol channel.
-// - No LLM calls in this project. Deterministic C# only.
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using MispricingWatch.McpServer;
 
-return; // placeholder entry point so the project builds
+var builder = Host.CreateApplicationBuilder(args);
+
+// stdout is the protocol channel, so every log line goes to stderr.
+builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
+
+builder.Services.AddSingleton<WorldService>();
+builder.Services.AddMcpServer()
+                .WithStdioServerTransport()
+                .WithToolsFromAssembly();
+
+var app = builder.Build();
+app.Services.GetRequiredService<WorldService>();   // build the world at startup, not on the first call
+await app.RunAsync();
