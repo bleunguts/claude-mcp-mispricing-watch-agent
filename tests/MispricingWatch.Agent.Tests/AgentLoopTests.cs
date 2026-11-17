@@ -94,13 +94,14 @@ public class AgentLoopTests
             Step(Script.CallTool("t1", "get_history", new() { ["tenor"] = "10Y", ["window"] = "1D" })),
             Step(Script.CallTool("t2", "get_benchmark", new() { ["tenor"] = "10Y", ["window"] = "1D" })),
             Step(Script.CallTool("t3", "compute_spread_stats", new() { ["tenor"] = "10Y" })),
+            Step(Script.CallTool("t4", "check_stale", new() { ["tenor"] = "10Y" })),
             Step(Script.Finish("Verdict: OK\nRationale: inside tolerance"))]);
 
         var result = await AgentLoop.RunAsync(
             model, _client, _tools, "go", 10, answerProblem: InvestigationGuardrails.Problem);
 
         Assert.That(result.Incomplete, Is.False);
-        Assert.That(result.Iterations, Is.EqualTo(5));
+        Assert.That(result.Iterations, Is.EqualTo(6));
         var nudge = (TextBlock)result.Messages[2].Content.Single();
         Assert.That(nudge.Text, Does.StartWith("You have not finished. Call get_history"));
     }
