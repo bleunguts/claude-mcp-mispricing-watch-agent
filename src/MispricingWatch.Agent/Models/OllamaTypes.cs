@@ -1,0 +1,47 @@
+// Copied from claude-mcp-flaky-test-agent @ 99e77b6, src/FlakyDetective.Agent/OllamaTypes.cs (#51).
+// Changes: namespace only.
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace MispricingWatch.Agent;
+
+public record OllamaChatRequest(
+    [property: JsonPropertyName("model")] string Model,
+    [property: JsonPropertyName("messages")] List<OllamaMessage> Messages,
+    [property: JsonPropertyName("tools")] List<OllamaTool>? Tools,
+    [property: JsonPropertyName("stream")] bool Stream,
+    [property: JsonPropertyName("options")] OllamaOptions? Options);
+
+// NumPredict caps how many tokens the model may generate in one reply. Without it a model that gets stuck
+// repeating itself runs until the context is full, which on a CPU takes longer than the HTTP timeout.
+public record OllamaOptions(
+    [property: JsonPropertyName("num_ctx")] int NumCtx,
+    [property: JsonPropertyName("num_predict")] int? NumPredict = null);
+
+public record OllamaMessage(
+    [property: JsonPropertyName("role")] string Role,
+    [property: JsonPropertyName("content")] string Content,
+    [property: JsonPropertyName("tool_calls")] List<OllamaToolCall>? ToolCalls = null,
+    [property: JsonPropertyName("tool_name")] string? ToolName = null);
+
+public record OllamaToolCall(
+    [property: JsonPropertyName("id")] string? Id,
+    [property: JsonPropertyName("function")] OllamaFunctionCall Function);
+
+public record OllamaFunctionCall(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("arguments")] Dictionary<string, JsonElement> Arguments);
+
+public record OllamaTool(
+    [property: JsonPropertyName("type")] string Type,
+    [property: JsonPropertyName("function")] OllamaFunctionDefinition Function);
+
+public record OllamaFunctionDefinition(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("parameters")] JsonElement Parameters);
+
+public record OllamaChatResponse(
+    [property: JsonPropertyName("message")] OllamaMessage Message,
+    [property: JsonPropertyName("done")] bool Done,
+    [property: JsonPropertyName("done_reason")] string? DoneReason);

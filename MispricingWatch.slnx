@@ -5,6 +5,7 @@
     <Project Path="src/MispricingWatch.McpServer/MispricingWatch.McpServer.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/MispricingWatch.Agent.Tests/MispricingWatch.Agent.Tests.csproj" />
     <Project Path="tests/MispricingWatch.CurveLab.Tests/MispricingWatch.CurveLab.Tests.csproj" />
   </Folder>
 </Solution>
