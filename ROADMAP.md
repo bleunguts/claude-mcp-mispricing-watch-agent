@@ -136,7 +136,7 @@ A fake world, planted faults, and one question per node: alarm or no alarm.
 
 - **Simulator:** one small curve with about a month of history, a benchmark series, and
   at least one node with no benchmark. Faults are planted at known times: a setting
-  change first (stale price and unit error are deferred, #47). Genuine market moves are planted too and should
+  change first, then a stale price (#47); the unit error is deferred (#62). Genuine market moves are planted too and should
   stay quiet. The agent never sees the hidden labels.
 - **Five tools, all deterministic:** `get_history`, `get_benchmark` (it says explicitly
   when none exists), `compute_spread_stats`, `compute_history_outlier`, `check_stale`.
@@ -250,7 +250,21 @@ labels. Run it with `dotnet test --filter SecretGroundTruth --logger "console;ve
 Both meet the targets (precision at least 80%, miss rate at most 5%); the test fails if the spread detector does not.
 The scenario is easy: every fault is a permanent 5 bps offset, so any sensible threshold catches it, and the baseline's
 2 bps is a free choice. The agent is not scored directly because its verdict is forced to match the spread detector.
-Harder faults (stale price, unit error, #47) and a history detector (#29) are what would separate the detectors.
+
+The stale price (#47) is the harder case: the published value freezes at onset, so the gap starts at zero and only
+grows as the market drifts. Same 100 seeds, same scoring:
+
+| Detector (stale price) | Hits | False alarms | Missed | Precision | Miss rate |
+|---|---|---|---|---|---|
+| Spread, per-node tolerance | 84 | 0 | 16 | 100% | 16% |
+| Fixed threshold, 2 bps | 79 | 4 | 21 | 95.2% | 21% |
+
+The spread detector now misses its 5% target (and the 10% hard limit); 10 of the 16 misses are on 30Y (the noisy competitor benchmark,
+tolerance 3.5 bps), 4 on 2Y, 2 on 10Y, none on 5Y. Late onset is part of it (7 of 20 missed when the price had been frozen
+for under 600 ticks, 1 of 12 after 1,500) but not all: the frozen gap is a random walk and can wander back inside
+tolerance even after 1,400 ticks. The stale price check
+(`check_stale`, #30) is the candidate fix, and is left deferred until a decision is made. The stale table is reported,
+not asserted. The unit error (#62) is still deferred; a history detector (#29) would be tested on it.
 
 ## MVP session plan
 
@@ -259,7 +273,8 @@ of sessions, one or two per phase. Everything else is deferred.
 
 | Phase | Session | Issue | Status |
 |---|---|---|---|
-| 1 | 1.6 Fault injector: setting change only (stale price and unit error deferred, #47) | #21 | done |
+| 1 | 1.6 Fault injector: setting change only | #21 | done |
+| 1 | 1.6b Stale price fault, scorecard table for it (unit error split out, #62) | #47 | done |
 | 1 | 1.7 World builder: one call builds prices plus hidden ground truth, one fault per world, leakage test | #24 | done |
 | 2 | 2.1 Server scaffold, `get_history`, `get_benchmark` (48 bucket averages per call) | #25 | done |
 | 2 | 2.2 `compute_spread_stats` (main detector) | #28 | done |

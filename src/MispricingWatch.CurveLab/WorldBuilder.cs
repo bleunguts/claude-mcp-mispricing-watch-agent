@@ -15,7 +15,8 @@ public static class WorldBuilder
     /// benchmark series, and (optionally) one setting-change fault on a benchmarked node.
     /// Prices go to the tools. Truth goes to the scorer.
     /// </summary>
-    public static (NodePrices[] Prices, GroundTruth Truth) Build(int seed, bool plantFault = true)
+    public static (NodePrices[] Prices, GroundTruth Truth) Build(
+        int seed, bool plantFault = true, FaultType faultType = FaultType.SettingChange)
     {
         var nodes = NodeSpec.Mvp;
         var trueRates = MarketSimulator.GenerateTrueRates(nodes, TotalTicks, seed);
@@ -29,7 +30,9 @@ public static class WorldBuilder
             var benchmarked = prices.Where(p => p.Benchmark is not null).ToArray();
             var victim = benchmarked[rng.Next(benchmarked.Length)];
             var onset = rng.Next(TotalTicks / 2, TotalTicks * 9 / 10); // history before and after
-            fault = FaultInjector.ApplySettingChange(victim, onset, int.MaxValue, FaultOffsetBps);
+            fault = faultType == FaultType.StalePrice
+                ? FaultInjector.ApplyStalePrice(victim, onset, durationTicks: null)
+                : FaultInjector.ApplySettingChange(victim, onset, durationTicks: null, FaultOffsetBps);
         }
 
         return (prices, new GroundTruth(move, fault));
