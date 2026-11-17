@@ -52,6 +52,26 @@ public class WorldBuilderTests
     }
 
     [Test]
+    public void Build_StalePriceType_PlantsFrozenPublishedPriceWithMatchingLabel()
+    {
+        var (prices, truth) = WorldBuilder.Build(Seed, faultType: FaultType.StalePrice);
+        var fault = truth.Fault!;
+        var node = prices.Single(p => p.Tenor == fault.Tenor);
+
+        Assert.That(fault.Type, Is.EqualTo(FaultType.StalePrice));
+        for (var t = fault.OnsetTick; t < node.Published.Length; t++)
+            Assert.That(node.Published[t], Is.EqualTo(node.Published[fault.OnsetTick - 1]));
+    }
+
+    [Test]
+    public void Build_DefaultType_IsSettingChange()
+    {
+        var (_, truth) = WorldBuilder.Build(Seed);
+
+        Assert.That(truth.Fault!.Type, Is.EqualTo(FaultType.SettingChange));
+    }
+
+    [Test]
     public void NodePrices_PublicShape_ExposesNoLabelTypes()
     {
         var labelTypes = new[] { typeof(FaultLabel), typeof(MarketMoveLabel), typeof(GroundTruth) };

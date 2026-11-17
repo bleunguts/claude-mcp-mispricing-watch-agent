@@ -30,14 +30,14 @@ public class SecretGroundTruthScoreTests
         public double MissRate => Hits + Misses == 0 ? 0 : (double)Misses / (Hits + Misses);
     }
 
-    private static Counts ScoreAgainstSecretGroundTruth(Func<NodePrices, bool> alarms)
+    private static Counts ScoreAgainstSecretGroundTruth(Func<NodePrices, bool> alarms, FaultType faultType)
     {
         var counts = new Counts();
         for (var seed = 1; seed <= Seeds; seed++)
         {
             foreach (var plantFault in new[] { true, false })
             {
-                var (prices, secretGroundTruth) = WorldBuilder.Build(seed, plantFault);   // <-- the answer key comes out here
+                var (prices, secretGroundTruth) = WorldBuilder.Build(seed, plantFault, faultType);   // <-- the answer key comes out here
                 foreach (var node in prices.Where(p => p.Benchmark is not null))
                 {
                     var isReallyFaulty_PeekedFromGroundTruth = secretGroundTruth.Fault?.Tenor == node.Tenor;   // <-- peeking
@@ -54,23 +54,41 @@ public class SecretGroundTruthScoreTests
     private static string Row(string name, Counts c) =>
         $"{name,-30} {c.Hits,5} {c.FalseAlarms,6} {c.Misses,7} {c.Precision,10:P1} {c.MissRate,10:P1}";
 
-    [Test]
-    public void SecretGroundTruthScore_SpreadDetectorAndFixedBaseline_SpreadMeetsTargets()
-    {
-        var spreadParams = new SpreadParams();
-        var spread = ScoreAgainstSecretGroundTruth(node => SpreadStats.Compute(node, spreadParams).OutsideTolerance);
-        var fixedThreshold = ScoreAgainstSecretGroundTruth(
-            node => Math.Abs((node.Published[^1] - node.Benchmark![^1]) * 100.0) > FixedThresholdBps);
+    private static readonly SpreadParams Spread = new();
 
-        Console.WriteLine("*** SECRET GROUND TRUTH SCORECARD (answer key peeked at on purpose) ***");
+    private static bool SpreadAlarms(NodePrices node) => SpreadStats.Compute(node, Spread).OutsideTolerance;
+
+    private static bool FixedThresholdAlarms(NodePrices node) =>
+        Math.Abs((node.Published[^1] - node.Benchmark![^1]) * 100.0) > FixedThresholdBps;
+
+    private static (Counts Spread, Counts Fixed) PrintTable(FaultType faultType)
+    {
+        var spread = ScoreAgainstSecretGroundTruth(SpreadAlarms, faultType);
+        var fixedThreshold = ScoreAgainstSecretGroundTruth(FixedThresholdAlarms, faultType);
+
+        Console.WriteLine($"*** SECRET GROUND TRUTH SCORECARD, fault type {faultType} (answer key peeked at on purpose) ***");
         Console.WriteLine($"{Seeds} seeds, each as a faulted and a clean world; 4 benchmarked nodes checked per world.");
         Console.WriteLine($"{"detector",-30} {"hits",5} {"false",6} {"missed",7} {"precision",10} {"miss rate",10}");
         Console.WriteLine(Row("spread (per-node tolerance)", spread));
         Console.WriteLine(Row($"fixed threshold ({FixedThresholdBps} bps)", fixedThreshold));
+        return (spread, fixedThreshold);
+    }
+
+    [Test]
+    public void SecretGroundTruthScore_SettingChange_SpreadMeetsTargets()
+    {
+        var (spread, _) = PrintTable(FaultType.SettingChange);
         Console.WriteLine($"Targets: precision at least {TargetMinPrecision:P0}, miss rate at most {TargetMaxMissRate:P0}.");
 
         // Only the spread detector is held to the targets; the baseline is there to compare against.
         Assert.That(spread.Precision, Is.GreaterThanOrEqualTo(TargetMinPrecision));
         Assert.That(spread.MissRate, Is.LessThanOrEqualTo(TargetMaxMissRate));
+    }
+
+    // The harder fault is reported, not asserted: the point is to see whether the detectors still cope.
+    [Test]
+    public void SecretGroundTruthScore_StalePrice_PrintsTable()
+    {
+        PrintTable(FaultType.StalePrice);
     }
 }
